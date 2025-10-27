@@ -170,20 +170,45 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
-    if (cmd === 'joke') {
-        const jokes = [
-            "Why do programmers prefer dark mode? Because light attracts bugs!",
-            "Why did the developer go broke? Because he used up all his cache!",
-            "Why do Java developers wear glasses? Because they can't C#!",
-            "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
-            "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!"
-        ];
-        
-        const joke = jokes[Math.floor(Math.random() * jokes.length)];
-        const embed = createEmbed(member, '😄 Programming Joke', joke);
-        
-        return message.reply({ embeds: [embed] });
-    }
+  if (cmd === 'joke') {
+    const jokes = [
+        "Why do programmers prefer dark mode? Because light attracts bugs!",
+        "Why did the developer go broke? Because he used up all his cache!",
+        "Why do Java developers wear glasses? Because they can't C#!",
+        "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
+        "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!",
+        "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
+        "What's a programmer's favorite hangout place? Foo Bar!",
+        "Why did the programmer quit his job? Because he didn't get arrays!",
+        "What do you call a programmer from Finland? Nerdic!",
+        "Why do programmers hate nature? It has too many bugs!",
+        "What's the object-oriented way to become wealthy? Inheritance!",
+        "Why did the functions stop calling each other? Because they had constant arguments!",
+        "What do you get when you cross a computer with a lifeguard? A screensaver!",
+        "Why was the JavaScript developer sad? Because he didn't Node how to Express himself!",
+        "What did the router say to the doctor? It hurts when IP!",
+        "Why do Python programmers wear glasses? Because they can't C!",
+        "What's a computer's favorite snack? Microchips!",
+        "Why did the computer show up at work late? It had a hard drive!",
+        "What do you call 8 hobbits? A hobbyte!",
+        "Why don't jokes work in octal? Because 7 10 11!",
+        "What's the best thing about a Boolean? Even if you're wrong, you're only off by a bit!",
+        "Why did the developer stay home? He lost his domain in a bet!",
+        "What do computers eat for a snack? Cookies!",
+        "Why was the cell phone wearing glasses? It lost its contacts!",
+        "What did the spider do on the computer? Made a website!",
+        "Why did the PowerPoint presentation cross the road? To get to the other slide!",
+        "What do you call a computer that sings? A-Dell!",
+        "Why was the computer cold? It left its Windows open!",
+        "What's an astronaut's favorite key on a keyboard? The space bar!",
+        "Why did the database administrator leave his wife? She had one-to-many relationships!"
+    ];
+    
+    const joke = jokes[Math.floor(Math.random() * jokes.length)];
+    const embed = createEmbed(member, '😄 Programming Joke', joke);
+    
+    return message.reply({ embeds: [embed] });
+}
 
     if (cmd === 'warn') {
         if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
@@ -323,3 +348,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error(err);
 
 });
+
