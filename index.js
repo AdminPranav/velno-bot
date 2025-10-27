@@ -4,7 +4,7 @@ const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits } =
 const CONFIG = {
     TOKEN: process.env.TOKEN,
     PREFIX: '!',
-    PREMIUM_ROLES: ['VIP', 'Premium Member', 'VelnoX'],
+    PREMIUM_ROLES: ['VelnoX'],
     COLORS: {
         velno: '#5865F2',
         velnox: '#00D9FF',
@@ -321,4 +321,5 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('❌ FAILED TO LOGIN!');
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
+
 });
