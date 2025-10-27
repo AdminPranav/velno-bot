@@ -1,10 +1,11 @@
 require('dotenv').config();
-const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 
 const CONFIG = {
     TOKEN: process.env.TOKEN,
+    CLIENT_ID: process.env.CLIENT_ID, // Add your bot's Client ID
     PREFIX: '!',
-    PREMIUM_ROLES: ['VelnoX'],
+    PREMIUM_ROLES: ['VIP', 'VelnoX', 'Premium Member'],
     COLORS: {
         velno: '#5865F2',
         velnox: '#00D9FF',
@@ -21,6 +22,45 @@ const client = new Client({
         GatewayIntentBits.GuildMembers
     ]
 });
+
+// Slash Commands Definition
+const commands = [
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Check bot latency'),
+    new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('View all available commands'),
+    new SlashCommandBuilder()
+        .setName('joke')
+        .setDescription('Get a random programming joke'),
+    new SlashCommandBuilder()
+        .setName('serverinfo')
+        .setDescription('Get information about this server'),
+].map(command => command.toJSON());
+
+// Register Slash Commands
+async function registerCommands() {
+    try {
+        if (!CONFIG.CLIENT_ID) {
+            console.log('⚠️ CLIENT_ID not set. Slash commands will not work.');
+            return;
+        }
+        
+        const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
+        
+        console.log('🔄 Registering slash commands...');
+        
+        await rest.put(
+            Routes.applicationCommands(CONFIG.CLIENT_ID),
+            { body: commands },
+        );
+        
+        console.log('✅ Slash commands registered successfully!');
+    } catch (error) {
+        console.error('❌ Error registering slash commands:', error);
+    }
+}
 
 function isPremiumUser(member) {
     if (!member || !member.roles) return false;
@@ -42,8 +82,7 @@ function createEmbed(member, title, description) {
         .setTimestamp();
 }
 
-client.once(Events.ClientReady, (readyClient) => {
-
+client.once(Events.ClientReady, async (readyClient) => {
     console.log('╔══════════════════════════════════════╗');
     console.log('║   VELNO & VELNOX BOT ONLINE!         ║');
     console.log('╚══════════════════════════════════════╝');
@@ -52,9 +91,115 @@ client.once(Events.ClientReady, (readyClient) => {
     console.log(`✓ Servers: ${client.guilds.cache.size}`);
     console.log('══════════════════════════════════════\n');
     
-    client.user.setActivity('Velno • Type !help', { type: 0 });
+    // Register slash commands
+    await registerCommands();
+    
+    client.user.setActivity('Velno • Type !help or /help', { type: 0 });
 });
 
+// Handle Slash Commands
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const member = interaction.member;
+    const isPremium = isPremiumUser(member);
+
+    try {
+        if (interaction.commandName === 'ping') {
+            const embed = createEmbed(
+                member,
+                '🏓 Pong!',
+                `**Bot Latency:** ${Date.now() - interaction.createdTimestamp}ms\n**API Latency:** ${client.ws.ping}ms`
+            );
+            await interaction.reply({ embeds: [embed] });
+        }
+
+        if (interaction.commandName === 'help') {
+            const embed = createEmbed(
+                member,
+                isPremium ? '👑 VelnoX Command Menu' : '📋 Velno Commands',
+                isPremium 
+                    ? '**Premium Active!** You can use commands without prefix!\n\n' 
+                    : `**Prefix:** \`${CONFIG.PREFIX}\` or use slash commands!\n\n`
+            )
+            .addFields(
+                { name: '📂 General', value: '`help`, `ping`, `joke`', inline: false },
+                { name: 'ℹ️ Info', value: '`serverinfo`, `userinfo`', inline: false },
+                { name: '🛡️ Moderation', value: '`warn`, `kick`, `ban`', inline: false }
+            );
+
+            if (isPremium) {
+                embed.addFields({ 
+                    name: '👑 VelnoX Premium', 
+                    value: '`status`, `embed`, `stats`', 
+                    inline: false 
+                });
+            }
+
+            await interaction.reply({ embeds: [embed] });
+        }
+
+        if (interaction.commandName === 'joke') {
+            const jokes = [
+                "Why do programmers prefer dark mode? Because light attracts bugs!",
+                "Why did the developer go broke? Because he used up all his cache!",
+                "Why do Java developers wear glasses? Because they can't C#!",
+                "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
+                "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!",
+                "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
+                "What's a programmer's favorite hangout place? Foo Bar!",
+                "Why did the programmer quit his job? Because he didn't get arrays!",
+                "What do you call a programmer from Finland? Nerdic!",
+                "Why do programmers hate nature? It has too many bugs!",
+                "What's the object-oriented way to become wealthy? Inheritance!",
+                "Why did the functions stop calling each other? Because they had constant arguments!",
+                "What do you get when you cross a computer with a lifeguard? A screensaver!",
+                "Why was the JavaScript developer sad? Because he didn't Node how to Express himself!",
+                "What did the router say to the doctor? It hurts when IP!",
+                "Why do Python programmers wear glasses? Because they can't C!",
+                "What's a computer's favorite snack? Microchips!",
+                "Why did the computer show up at work late? It had a hard drive!",
+                "What do you call 8 hobbits? A hobbyte!",
+                "Why don't jokes work in octal? Because 7 10 11!",
+                "What's the best thing about a Boolean? Even if you're wrong, you're only off by a bit!",
+                "Why did the developer stay home? He lost his domain in a bet!",
+                "What do computers eat for a snack? Cookies!",
+                "Why was the cell phone wearing glasses? It lost its contacts!",
+                "What did the spider do on the computer? Made a website!",
+                "Why did the PowerPoint presentation cross the road? To get to the other slide!",
+                "What do you call a computer that sings? A-Dell!",
+                "Why was the computer cold? It left its Windows open!",
+                "What's an astronaut's favorite key on a keyboard? The space bar!",
+                "Why did the database administrator leave his wife? She had one-to-many relationships!"
+            ];
+            
+            const joke = jokes[Math.floor(Math.random() * jokes.length)];
+            const embed = createEmbed(member, '😄 Programming Joke', joke);
+            await interaction.reply({ embeds: [embed] });
+        }
+
+        if (interaction.commandName === 'serverinfo') {
+            const guild = interaction.guild;
+            const embed = createEmbed(member, `📊 ${guild.name}`, null)
+                .setThumbnail(guild.iconURL({ dynamic: true }))
+                .addFields(
+                    { name: '👑 Owner', value: `<@${guild.ownerId}>`, inline: true },
+                    { name: '👥 Members', value: guild.memberCount.toString(), inline: true },
+                    { name: '📝 Channels', value: guild.channels.cache.size.toString(), inline: true },
+                    { name: '🎭 Roles', value: guild.roles.cache.size.toString(), inline: true },
+                    { name: '📅 Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true }
+                );
+            
+            await interaction.reply({ embeds: [embed] });
+        }
+
+    } catch (error) {
+        console.error('Slash command error:', error);
+        await interaction.reply({ content: '❌ An error occurred!', ephemeral: true });
+    }
+});
+
+// Handle Regular Message Commands (existing code)
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
@@ -101,10 +246,10 @@ async function handleCommand(message, cmd, args) {
             isPremium ? '👑 VelnoX Command Menu' : '📋 Velno Commands',
             isPremium 
                 ? '**Premium Active!** You can use commands without prefix!\n\n' 
-                : `**Prefix:** \`${CONFIG.PREFIX}\`\n\n`
+                : `**Prefix:** \`${CONFIG.PREFIX}\` or use slash commands!\n\n`
         )
         .addFields(
-            { name: '📂 General', value: '`help`, `ping`', inline: false },
+            { name: '📂 General', value: '`help`, `ping`, `joke`', inline: false },
             { name: 'ℹ️ Info', value: '`serverinfo`, `userinfo`', inline: false },
             { name: '🎮 Fun', value: '`joke`', inline: false },
             { name: '🛡️ Moderation', value: '`warn`, `kick`, `ban`', inline: false }
@@ -119,7 +264,7 @@ async function handleCommand(message, cmd, args) {
         } else {
             embed.addFields({
                 name: '💎 Want Premium?',
-                value: 'Get a VIP role for no-prefix commands!',
+                value: 'Get a VelnoX role for no-prefix commands!',
                 inline: false
             });
         }
@@ -170,46 +315,47 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
-  if (cmd === 'joke') {
-    const jokes = [
-        "Why do programmers prefer dark mode? Because light attracts bugs!",
-        "Why did the developer go broke? Because he used up all his cache!",
-        "Why do Java developers wear glasses? Because they can't C#!",
-        "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
-        "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!",
-        "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
-        "What's a programmer's favorite hangout place? Foo Bar!",
-        "Why did the programmer quit his job? Because he didn't get arrays!",
-        "What do you call a programmer from Finland? Nerdic!",
-        "Why do programmers hate nature? It has too many bugs!",
-        "What's the object-oriented way to become wealthy? Inheritance!",
-        "Why did the functions stop calling each other? Because they had constant arguments!",
-        "What do you get when you cross a computer with a lifeguard? A screensaver!",
-        "Why was the JavaScript developer sad? Because he didn't Node how to Express himself!",
-        "What did the router say to the doctor? It hurts when IP!",
-        "Why do Python programmers wear glasses? Because they can't C!",
-        "What's a computer's favorite snack? Microchips!",
-        "Why did the computer show up at work late? It had a hard drive!",
-        "What do you call 8 hobbits? A hobbyte!",
-        "Why don't jokes work in octal? Because 7 10 11!",
-        "What's the best thing about a Boolean? Even if you're wrong, you're only off by a bit!",
-        "Why did the developer stay home? He lost his domain in a bet!",
-        "What do computers eat for a snack? Cookies!",
-        "Why was the cell phone wearing glasses? It lost its contacts!",
-        "What did the spider do on the computer? Made a website!",
-        "Why did the PowerPoint presentation cross the road? To get to the other slide!",
-        "What do you call a computer that sings? A-Dell!",
-        "Why was the computer cold? It left its Windows open!",
-        "What's an astronaut's favorite key on a keyboard? The space bar!",
-        "Why did the database administrator leave his wife? She had one-to-many relationships!"
-    ];
-    
-    const joke = jokes[Math.floor(Math.random() * jokes.length)];
-    const embed = createEmbed(member, '😄 Programming Joke', joke);
-    
-    return message.reply({ embeds: [embed] });
-}
+    if (cmd === 'joke') {
+        const jokes = [
+            "Why do programmers prefer dark mode? Because light attracts bugs!",
+            "Why did the developer go broke? Because he used up all his cache!",
+            "Why do Java developers wear glasses? Because they can't C#!",
+            "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
+            "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!",
+            "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
+            "What's a programmer's favorite hangout place? Foo Bar!",
+            "Why did the programmer quit his job? Because he didn't get arrays!",
+            "What do you call a programmer from Finland? Nerdic!",
+            "Why do programmers hate nature? It has too many bugs!",
+            "What's the object-oriented way to become wealthy? Inheritance!",
+            "Why did the functions stop calling each other? Because they had constant arguments!",
+            "What do you get when you cross a computer with a lifeguard? A screensaver!",
+            "Why was the JavaScript developer sad? Because he didn't Node how to Express himself!",
+            "What did the router say to the doctor? It hurts when IP!",
+            "Why do Python programmers wear glasses? Because they can't C!",
+            "What's a computer's favorite snack? Microchips!",
+            "Why did the computer show up at work late? It had a hard drive!",
+            "What do you call 8 hobbits? A hobbyte!",
+            "Why don't jokes work in octal? Because 7 10 11!",
+            "What's the best thing about a Boolean? Even if you're wrong, you're only off by a bit!",
+            "Why did the developer stay home? He lost his domain in a bet!",
+            "What do computers eat for a snack? Cookies!",
+            "Why was the cell phone wearing glasses? It lost its contacts!",
+            "What did the spider do on the computer? Made a website!",
+            "Why did the PowerPoint presentation cross the road? To get to the other slide!",
+            "What do you call a computer that sings? A-Dell!",
+            "Why was the computer cold? It left its Windows open!",
+            "What's an astronaut's favorite key on a keyboard? The space bar!",
+            "Why did the database administrator leave his wife? She had one-to-many relationships!"
+        ];
+        
+        const joke = jokes[Math.floor(Math.random() * jokes.length)];
+        const embed = createEmbed(member, '😄 Programming Joke', joke);
+        
+        return message.reply({ embeds: [embed] });
+    }
 
+    // Rest of commands (warn, kick, ban, status, embed, stats) remain the same...
     if (cmd === 'warn') {
         if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
             return message.reply('❌ You need Moderate Members permission!');
@@ -346,6 +492,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('❌ FAILED TO LOGIN!');
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
-
 });
-
