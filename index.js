@@ -1,9 +1,22 @@
 require('dotenv').config();
+
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('🤖 Velno Bot is Online!');
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Web server running on port ${PORT}`);
+});
+
 const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 
 const CONFIG = {
     TOKEN: process.env.TOKEN,
-    CLIENT_ID: process.env.CLIENT_ID, // Add your bot's Client ID
+    CLIENT_ID: process.env.CLIENT_ID,
     PREFIX: '!',
     PREMIUM_ROLES: ['VIP', 'VelnoX', 'Premium Member'],
     COLORS: {
@@ -493,4 +506,5 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
