@@ -94,7 +94,7 @@ client.once(Events.ClientReady, async (readyClient) => {
     // Register slash commands
     await registerCommands();
     
-    client.user.setActivity('Velno • Type !help or /help', { type: 0 });
+    client.user.setActivity('Made with Node.js 💚 | !help', { type: 0 });
 });
 
 // Handle Slash Commands
@@ -493,3 +493,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
