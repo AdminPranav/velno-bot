@@ -1,11 +1,14 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.static('public'));
+
 app.get('/', (req, res) => {
-    res.send('🤖 Velno Bot is Online!');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
@@ -506,5 +509,6 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
 
