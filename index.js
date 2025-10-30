@@ -168,7 +168,9 @@ client.on(Events.InteractionCreate, async interaction => {
                     : `**Prefix:** \`${CONFIG.PREFIX}\` or use slash commands!\n\n`
             )
             .addFields(
+                .addFields(
                 { name: '📂 General', value: '`help`, `ping`, `joke`', inline: false },
+                { name: '💰 Economy', value: '`work`, `balance`, `deposit`, `withdraw`, `rob`', inline: false },
                 { name: 'ℹ️ Info', value: '`serverinfo`, `userinfo`', inline: false },
                 { name: '🛡️ Moderation', value: '`warn`, `kick`, `ban`', inline: false }
             );
@@ -566,6 +568,7 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
 
 
