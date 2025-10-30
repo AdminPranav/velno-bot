@@ -1,5 +1,11 @@
 require('dotenv').config();
 
+const mongoose = require('mongoose');
+
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+    console.log('💰 Casino System Ready!');
+}).catch(err => console.error('❌ DB Error:', err));
+
 const express = require('express');
 const path = require('path');
 const app = express();
@@ -29,7 +35,30 @@ const CONFIG = {
         success: '#00FF88'
     }
 };
+// User Database Model
+const userSchema = new mongoose.Schema({
+    userId: String,
+    username: String,
+    wallet: { type: Number, default: 100 },
+    bank: { type: Number, default: 0 },
+    lastWork: Date,
+    lastRob: Date,
+    totalEarned: { type: Number, default: 0 }
+});
 
+const User = mongoose.model('User', userSchema);
+
+async function getUser(userId, username) {
+    let user = await User.findOne({ userId });
+    if (!user) {
+        user = await User.create({ userId, username, wallet: 100, bank: 0 });
+    }
+    return user;
+}
+
+function formatMoney(amount) {
+    return `${amount.toLocaleString()} V-Coins`;
+}
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -193,7 +222,34 @@ client.on(Events.InteractionCreate, async interaction => {
             const embed = createEmbed(member, '😄 Programming Joke', joke);
             await interaction.reply({ embeds: [embed] });
         }
+        
+if (cmd === 'work') {
+    const user = await getUser(message.author.id, message.author.username);
+    
+    const earnings = Math.floor(Math.random() * 151) + 50;
+    user.wallet += earnings;
+    user.totalEarned += earnings;
+    user.lastWork = new Date();
+    await user.save();
+    
+    const embed = createEmbed(member, '💼 Work Complete!', 
+        `You earned **${formatMoney(earnings)}**!\n\n💰 Wallet: ${formatMoney(user.wallet)}`);
+    
+    return message.reply({ embeds: [embed] });
+}
 
+if (cmd === 'balance' || cmd === 'bal') {
+    const user = await getUser(message.author.id, message.author.username);
+    
+    const embed = createEmbed(member, '💰 Your Balance', null)
+        .addFields(
+            { name: '💵 Wallet', value: formatMoney(user.wallet), inline: true },
+            { name: '🏦 Bank', value: formatMoney(user.bank), inline: true }
+        );
+    
+    return message.reply({ embeds: [embed] });
+}
+        
         if (interaction.commandName === 'serverinfo') {
             const guild = interaction.guild;
             const embed = createEmbed(member, `📊 ${guild.name}`, null)
@@ -231,8 +287,9 @@ client.on('messageCreate', async (message) => {
         const words = message.content.trim().split(/ +/);
         const potentialCommand = words[0].toLowerCase();
         
-        const validCommands = ['help', 'ping', 'serverinfo', 'userinfo', 'joke', 
-                               'warn', 'kick', 'ban', 'status', 'embed', 'stats'];
+       const validCommands = ['help', 'ping', 'serverinfo', 'userinfo', 'joke', 
+                       'warn', 'kick', 'ban', 'status', 'embed', 'stats',
+                       'work', 'balance', 'bal'];
         
         if (validCommands.includes(potentialCommand)) {
             commandName = potentialCommand;
@@ -509,6 +566,7 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
 
 
