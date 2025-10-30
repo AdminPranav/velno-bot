@@ -224,33 +224,6 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply({ embeds: [embed] });
         }
         
-if (cmd === 'work') {
-    const user = await getUser(message.author.id, message.author.username);
-    
-    const earnings = Math.floor(Math.random() * 151) + 50;
-    user.wallet += earnings;
-    user.totalEarned += earnings;
-    user.lastWork = new Date();
-    await user.save();
-    
-    const embed = createEmbed(member, '💼 Work Complete!', 
-        `You earned **${formatMoney(earnings)}**!\n\n💰 Wallet: ${formatMoney(user.wallet)}`);
-    
-    return message.reply({ embeds: [embed] });
-}
-
-if (cmd === 'balance' || cmd === 'bal') {
-    const user = await getUser(message.author.id, message.author.username);
-    
-    const embed = createEmbed(member, '💰 Your Balance', null)
-        .addFields(
-            { name: '💵 Wallet', value: formatMoney(user.wallet), inline: true },
-            { name: '🏦 Bank', value: formatMoney(user.bank), inline: true }
-        );
-    
-    return message.reply({ embeds: [embed] });
-}
-        
         if (interaction.commandName === 'serverinfo') {
             const guild = interaction.guild;
             const embed = createEmbed(member, `📊 ${guild.name}`, null)
@@ -543,7 +516,32 @@ async function handleCommand(message, cmd, args) {
         if (!isPremium) {
             return message.reply('🔒 This is a VelnoX premium command!');
         }
+if (cmd === 'work') {
+    const user = await getUser(message.author.id, message.author.username);
+    
+    const earnings = Math.floor(Math.random() * 151) + 50;
+    user.wallet += earnings;
+    user.totalEarned += earnings;
+    user.lastWork = new Date();
+    await user.save();
+    
+    const embed = createEmbed(member, '💼 Work Complete!', 
+        `You earned **${formatMoney(earnings)}**!\n\n💰 Wallet: ${formatMoney(user.wallet)}`);
+    
+    return message.reply({ embeds: [embed] });
+}
 
+if (cmd === 'balance' || cmd === 'bal') {
+    const user = await getUser(message.author.id, message.author.username);
+    
+    const embed = createEmbed(member, '💰 Your Balance', null)
+        .addFields(
+            { name: '💵 Wallet', value: formatMoney(user.wallet), inline: true },
+            { name: '🏦 Bank', value: formatMoney(user.bank), inline: true }
+        );
+    
+    return message.reply({ embeds: [embed] });
+}
         const totalMembers = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
         const uptime = process.uptime();
         const days = Math.floor(uptime / 86400);
@@ -567,6 +565,7 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
 
 
