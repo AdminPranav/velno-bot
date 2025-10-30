@@ -161,20 +161,19 @@ client.on(Events.InteractionCreate, async interaction => {
 
         if (interaction.commandName === 'help') {
             const embed = createEmbed(
-                member,
-                isPremium ? '👑 VelnoX Command Menu' : '📋 Velno Commands',
-                isPremium 
-                    ? '**Premium Active!** You can use commands without prefix!\n\n' 
-                    : `**Prefix:** \`${CONFIG.PREFIX}\` or use slash commands!\n\n`
-            )
-            .addFields(
-                .addFields(
-                { name: '📂 General', value: '`help`, `ping`, `joke`', inline: false },
-                { name: '💰 Economy', value: '`work`, `balance`, `deposit`, `withdraw`, `rob`', inline: false },
-                { name: 'ℹ️ Info', value: '`serverinfo`, `userinfo`', inline: false },
-                { name: '🛡️ Moderation', value: '`warn`, `kick`, `ban`', inline: false }
-            );
-
+    member,
+    isPremium ? '👑 VelnoX Command Menu' : '📋 Velno Commands',
+    isPremium 
+        ? '**Premium Active!** You can use commands without prefix!\n\n' 
+        : `**Prefix:** \`${CONFIG.PREFIX}\` or use slash commands!\n\n`
+)
+.addFields(
+    { name: '📂 General', value: '`help`, `ping`, `joke`', inline: false },
+    { name: '💰 Economy', value: '`work`, `balance`', inline: false },
+    { name: 'ℹ️ Info', value: '`serverinfo`, `userinfo`', inline: false },
+    { name: '🛡️ Moderation', value: '`warn`, `kick`, `ban`', inline: false }
+);
+            
             if (isPremium) {
                 embed.addFields({ 
                     name: '👑 VelnoX Premium', 
@@ -568,6 +567,7 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
 
 
