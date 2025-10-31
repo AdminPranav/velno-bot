@@ -35,10 +35,10 @@ const CONFIG = {
         success: '#00FF88'
     },
     COOLDOWNS: {
-        work: 3600000,
-        rob: 300000,
-        crime: 600000,
-        steal: 900000
+        work: 10000,
+        rob: 10000,
+        crime: 10000,
+        steal: 600000
     }
 };
 
@@ -827,4 +827,5 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
 
