@@ -565,36 +565,59 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
-    if (cmd === 'coinflip' || cmd === 'cf') {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastCoinflip, CONFIG.COOLDOWNS.coinflip);
+if (cmd === 'coinflip' || cmd === 'cf') {
+    const user = await getUser(message.author.id, message.author.username);
+    const cooldown = checkCooldown(user.lastCoinflip, CONFIG.COOLDOWNS.coinflip);
 
-        if (!cooldown.ready) return message.reply('❌ Wait ' + cooldown.timeLeft + ' before flipping again!');
-        if (!args[0]) return message.reply('❌ Usage: !coinflip <bet>');
+    if (!cooldown.ready) return message.reply('❌ Wait ' + cooldown.timeLeft + ' before flipping again!');
+    if (!args[0]) return message.reply('❌ Usage: !coinflip <bet>');
 
-        let bet = parseInt(args[0]);
-        if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply('❌ Invalid bet!');
+    let bet = parseInt(args[0]);
+    if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply('❌ Invalid bet!');
 
-        const win = Math.random() > 0.5;
+    const win = Math.random() > 0.5;
+    const result = win ? 'Heads' : 'Tails';
 
+    // ANIMATION MESSAGE
+    const animationEmbed = createEmbed(member, '🪙 Flipping Coin...', '🪙 ⚪ 🪙\n\n*spinning...*');
+    const animationMsg = await message.reply({ embeds: [animationEmbed] });
+
+    // Wait 2 seconds for animation
+    setTimeout(async () => {
         if (win) {
             user.wallet += bet;
             user.totalEarned += bet;
             user.gamesWon += 1;
             await user.save();
 
-            const embed = createEmbed(member, '🪙 Coinflip - WIN!', '**Won:** ' + formatMoney(bet) + '\n\n💰 Balance: ' + formatMoney(user.wallet));
-            return message.reply({ embeds: [embed] });
+            const resultEmbed = new EmbedBuilder()
+                .setColor(CONFIG.COLORS.success)
+                .setTitle('🪙 HEADS! YOU WIN!')
+                .setDescription('**Result:** ' + result + '\n**Won:** ' + formatMoney(bet) + '\n\n💰 Balance: ' + formatMoney(user.wallet))
+                .setFooter({ text: 'VelnoX • Cool mind. Sharp code.' })
+                .setTimestamp();
+
+            await animationMsg.edit({ embeds: [resultEmbed] });
         } else {
             user.wallet -= bet;
             user.totalLost += bet;
             user.gamesLost += 1;
             await user.save();
 
-            const embed = createEmbed(member, '🪙 Coinflip - LOSE!', '**Lost:** ' + formatMoney(bet) + '\n\n💰 Balance: ' + formatMoney(user.wallet));
-            return message.reply({ embeds: [embed] });
+            const resultEmbed = new EmbedBuilder()
+                .setColor(CONFIG.COLORS.error)
+                .setTitle('🪙 TAILS! YOU LOSE!')
+                .setDescription('**Result:** ' + result + '\n**Lost:** ' + formatMoney(bet) + '\n\n💰 Balance: ' + formatMoney(user.wallet))
+                .setFooter({ text: 'VelnoX • Cool mind. Sharp code.' })
+                .setTimestamp();
+
+            await animationMsg.edit({ embeds: [resultEmbed] });
         }
-    }
+        user.lastCoinflip = new Date();
+        await user.save();
+    }, 2000);
+}
+
 
     if (cmd === 'dice') {
         const user = await getUser(message.author.id, message.author.username);
@@ -1173,3 +1196,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct!');
     console.error(err);
 });
+
