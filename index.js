@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log('🌐 Web server running on port ' + PORT);
 });
 
@@ -827,3 +827,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('Make sure your bot token is correct in .env file!');
     console.error(err);
 });
+
