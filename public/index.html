@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velno & VelnoX | Discord Bot</title>
+    <title>Velno & VelnoX | 45+ Commands Discord Bot</title>
+    <meta name="description" content="Ultimate Discord bot with economy, casino, moderation, and premium features">
     <style>
         * {
             margin: 0;
@@ -72,7 +73,6 @@
             background: linear-gradient(135deg, #5865F2, #00D9FF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(88, 101, 242, 0.5);
         }
 
         nav a {
@@ -109,8 +109,8 @@
         }
 
         @keyframes glow {
-            from { text-shadow: 0 0 20px rgba(88, 101, 242, 0.5), 0 0 40px rgba(0, 217, 255, 0.3); }
-            to { text-shadow: 0 0 30px rgba(88, 101, 242, 0.8), 0 0 60px rgba(0, 217, 255, 0.5); }
+            from { text-shadow: 0 0 20px rgba(88, 101, 242, 0.5); }
+            to { text-shadow: 0 0 30px rgba(0, 217, 255, 0.8); }
         }
 
         .hero .tagline {
@@ -198,10 +198,17 @@
         .section-title {
             font-size: 48px;
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 20px;
             background: linear-gradient(135deg, #5865F2, #00D9FF);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 18px;
+            margin-bottom: 60px;
         }
 
         .features-grid {
@@ -245,37 +252,39 @@
         .commands-container {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            padding: 40px;
+            padding: 50px;
             border-radius: 20px;
             border: 2px solid rgba(88, 101, 242, 0.3);
         }
 
         .command-category {
-            margin-bottom: 40px;
+            margin-bottom: 50px;
+        }
+
+        .command-category:last-child {
+            margin-bottom: 0;
         }
 
         .command-category h3 {
-            font-size: 28px;
+            font-size: 32px;
             color: #00D9FF;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
         }
 
-        .command-list {
+        .command-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 15px;
         }
 
         .command-item {
             background: rgba(255, 255, 255, 0.03);
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 12px;
             border: 1px solid rgba(88, 101, 242, 0.2);
-            font-family: 'Courier New', monospace;
-            color: #00FF88;
             transition: all 0.3s;
             cursor: pointer;
         }
@@ -283,7 +292,20 @@
         .command-item:hover {
             background: rgba(0, 217, 255, 0.1);
             border-color: #00D9FF;
-            transform: scale(1.05);
+            transform: translateX(5px);
+        }
+
+        .command-name {
+            font-family: 'Courier New', monospace;
+            color: #00FF88;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .command-desc {
+            color: #888;
+            font-size: 14px;
         }
 
         .premium-section {
@@ -297,13 +319,20 @@
         .premium-title {
             font-size: 42px;
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             color: #00D9FF;
+        }
+
+        .premium-subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 18px;
+            margin-bottom: 40px;
         }
 
         .premium-features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
         }
 
@@ -312,6 +341,16 @@
             align-items: center;
             gap: 15px;
             font-size: 18px;
+            padding: 20px;
+            background: rgba(0, 217, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .premium-feature:hover {
+            background: rgba(0, 217, 255, 0.1);
+            transform: scale(1.05);
         }
 
         .premium-icon {
@@ -342,12 +381,25 @@
             color: #5865F2;
         }
 
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(0, 217, 255, 0.2);
+            border: 1px solid #00D9FF;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #00D9FF;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
         @media (max-width: 768px) {
             .hero h1 { font-size: 42px; }
             .stats { flex-direction: column; gap: 20px; }
             header { padding: 15px 20px; }
             nav { display: none; }
             .section { padding: 60px 20px; }
+            .commands-container { padding: 30px 20px; }
         }
     </style>
 </head>
@@ -371,15 +423,15 @@
         
         <div class="stats">
             <div class="stat-item">
-                <div class="stat-number">3+</div>
+                <div class="stat-number">2+</div>
                 <div class="stat-label">SERVERS</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">150+</div>
+                <div class="stat-number">100+</div>
                 <div class="stat-label">USERS</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">21</div>
+                <div class="stat-number">45+</div>
                 <div class="stat-label">COMMANDS</div>
             </div>
         </div>
@@ -392,90 +444,251 @@
 
     <section class="section" id="features">
         <h2 class="section-title">Powerful Features</h2>
+        <p class="section-subtitle">Everything you need in one bot</p>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">💰</div>
                 <h3>Economy System</h3>
-                <p>Work, rob, commit crimes, and steal to build your V-Coin empire. Bank system included for safety!</p>
+                <p>Work, rob, commit crimes, steal, and claim daily rewards to build your V-Coin empire. Full banking system included!</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎰</div>
                 <h3>Casino Games</h3>
-                <p>Test your luck with coinflip and dice games. Win big or lose it all! Addictive gameplay loop.</p>
+                <p>6 addictive casino games: Coinflip, Dice, Slot Machine, Blackjack, Roulette, and Jackpot. Win big or lose it all!</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🛡️</div>
-                <h3>Moderation</h3>
-                <p>Keep your server safe with warn, kick, and ban commands with permission checks.</p>
+                <h3>Advanced Moderation</h3>
+                <p>9 powerful moderation tools including warn, mute, kick, ban, message cleanup, and channel locking capabilities.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">👑</div>
                 <h3>VelnoX Premium</h3>
-                <p>No-prefix commands, custom embeds, and exclusive features for premium members!</p>
+                <p>No-prefix commands, custom embeds, announcements, boost status, color roles, and reaction roles for premium members!</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📊</div>
-                <h3>Stats Tracking</h3>
-                <p>Track total earned, lost, games won/lost, and compete with friends!</p>
+                <h3>Stats & Leaderboards</h3>
+                <p>Track earnings, losses, wins, and compete on the global leaderboard. Full game statistics tracking!</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
-                <h3>Fast & Reliable</h3>
-                <p>Built with discord.js v14 and MongoDB for lightning-fast performance.</p>
+                <h3>Lightning Fast</h3>
+                <p>Built with Discord.js v14 and MongoDB. Optimized cooldowns and instant responses. 99% uptime guaranteed!</p>
             </div>
         </div>
     </section>
 
     <section class="section" id="commands">
-        <h2 class="section-title">Bot Commands</h2>
+        <h2 class="section-title">All Bot Commands</h2>
+        <p class="section-subtitle">45+ commands across 6 categories • Prefix: !</p>
+        
         <div class="commands-container">
             <div class="command-category">
-                <h3>💰 Economy Commands</h3>
-                <div class="command-list">
-                    <div class="command-item">!work</div>
-                    <div class="command-item">!balance</div>
-                    <div class="command-item">!deposit</div>
-                    <div class="command-item">!withdraw</div>
-                    <div class="command-item">!rob</div>
-                    <div class="command-item">!crime</div>
-                    <div class="command-item">!steal @user</div>
+                <h3>💰 Economy Commands <span class="badge">9 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!work</div>
+                        <div class="command-desc">Earn V-Coins by working (10s cooldown)</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!balance</div>
+                        <div class="command-desc">Check your wallet and bank balance</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!deposit</div>
+                        <div class="command-desc">Move coins to your bank for safety</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!withdraw</div>
+                        <div class="command-desc">Take coins from your bank</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!rob</div>
+                        <div class="command-desc">Quick robberies for fast cash (10s cooldown)</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!crime</div>
+                        <div class="command-desc">High-risk crimes for big rewards (10s cooldown)</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!steal @user</div>
+                        <div class="command-desc">Steal from other players (10min cooldown)</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!daily</div>
+                        <div class="command-desc">Claim your daily reward (24hr cooldown)</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!lb</div>
+                        <div class="command-desc">View the top 10 richest users</div>
+                    </div>
                 </div>
             </div>
 
             <div class="command-category">
-                <h3>🎰 Casino Commands</h3>
-                <div class="command-list">
-                    <div class="command-item">!coinflip &lt;bet&gt;</div>
-                    <div class="command-item">!dice &lt;bet&gt;</div>
+                <h3>🎰 Casino Commands <span class="badge">6 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!coinflip &lt;bet&gt;</div>
+                        <div class="command-desc">50/50 chance to double your bet</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!dice &lt;bet&gt;</div>
+                        <div class="command-desc">Roll dice against the bot</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!slot &lt;bet&gt;</div>
+                        <div class="command-desc">Spin the slot machine for 5x wins</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!blackjack &lt;bet&gt;</div>
+                        <div class="command-desc">Classic blackjack - get 21!</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!roulette &lt;bet&gt;</div>
+                        <div class="command-desc">Spin the roulette wheel for 3x wins</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!jackpot &lt;bet&gt;</div>
+                        <div class="command-desc">2% chance to win the growing jackpot pool!</div>
+                    </div>
                 </div>
             </div>
 
             <div class="command-category">
-                <h3>📂 General Commands</h3>
-                <div class="command-list">
-                    <div class="command-item">!help</div>
-                    <div class="command-item">!ping</div>
-                    <div class="command-item">!serverinfo</div>
-                    <div class="command-item">!userinfo</div>
-                    <div class="command-item">!joke</div>
+                <h3>📂 General Commands <span class="badge">7 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!help</div>
+                        <div class="command-desc">Show all available commands</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!ping</div>
+                        <div class="command-desc">Check bot response time</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!serverinfo</div>
+                        <div class="command-desc">View server statistics</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!userinfo</div>
+                        <div class="command-desc">View user profile information</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!avatar</div>
+                        <div class="command-desc">Display user's avatar in HD</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!joke</div>
+                        <div class="command-desc">Get a random programming joke</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!quote</div>
+                        <div class="command-desc">Get an inspirational quote</div>
+                    </div>
                 </div>
             </div>
 
             <div class="command-category">
-                <h3>🛡️ Moderation Commands</h3>
-                <div class="command-list">
-                    <div class="command-item">!warn @user</div>
-                    <div class="command-item">!kick @user</div>
-                    <div class="command-item">!ban @user</div>
+                <h3>🛡️ Moderation Commands <span class="badge">9 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!warn @user</div>
+                        <div class="command-desc">Warn a user for breaking rules</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!kick @user</div>
+                        <div class="command-desc">Kick a user from the server</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!ban @user</div>
+                        <div class="command-desc">Ban a user permanently</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!clear [amount]</div>
+                        <div class="command-desc">Bulk delete 1-100 messages</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!botclear</div>
+                        <div class="command-desc">Delete only bot messages</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!mute @user</div>
+                        <div class="command-desc">Mute a member in the server</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!unmute @user</div>
+                        <div class="command-desc">Unmute a muted member</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!lock</div>
+                        <div class="command-desc">Lock the current channel</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!unlock</div>
+                        <div class="command-desc">Unlock a locked channel</div>
+                    </div>
                 </div>
             </div>
 
             <div class="command-category">
-                <h3>👑 Premium Commands</h3>
-                <div class="command-list">
-                    <div class="command-item">!status</div>
-                    <div class="command-item">!embed</div>
-                    <div class="command-item">!stats</div>
+                <h3>👑 Premium Commands <span class="badge">7 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!status</div>
+                        <div class="command-desc">Check your VelnoX premium status</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!embed</div>
+                        <div class="command-desc">Create custom styled embeds</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!stats</div>
+                        <div class="command-desc">View detailed bot statistics</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!announce</div>
+                        <div class="command-desc">Send styled announcements</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!booststatus</div>
+                        <div class="command-desc">Check who boosted the server</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!colorrole</div>
+                        <div class="command-desc">Create custom colored roles</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!reactionrole</div>
+                        <div class="command-desc">Setup reaction role systems</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-category">
+                <h3>🧠 Utility Commands <span class="badge">5 COMMANDS</span></h3>
+                <div class="command-grid">
+                    <div class="command-item">
+                        <div class="command-name">!uptime</div>
+                        <div class="command-desc">Check how long bot's been running</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!invite</div>
+                        <div class="command-desc">Get the bot invite link</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!vote</div>
+                        <div class="command-desc">Vote for the bot on top.gg</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">!suggest</div>
+                        <div class="command-desc">Submit feature suggestions</div>
+                    </div>
+                    <div class="command-item">
+                        <div class="command-name">Slash Commands</div>
+                        <div class="command-desc">Works with / commands too!</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -484,30 +697,39 @@
     <section class="section" id="premium">
         <div class="premium-section">
             <h2 class="premium-title">👑 VelnoX Premium Benefits</h2>
+            <p class="premium-subtitle">Get a VIP, VelnoX, or Premium Member role to unlock exclusive features!</p>
             <div class="premium-features">
                 <div class="premium-feature">
                     <span class="premium-icon">⚡</span>
-                    <span>No-prefix commands - Just type 'work' instead of '!work'</span>
+                    <span><strong>No-prefix commands</strong> - Type 'work' instead of '!work'</span>
                 </div>
                 <div class="premium-feature">
                     <span class="premium-icon">🎨</span>
-                    <span>Custom embed creator with your style</span>
+                    <span><strong>Custom embeds</strong> - Create beautiful styled messages</span>
                 </div>
                 <div class="premium-feature">
                     <span class="premium-icon">📊</span>
-                    <span>Advanced bot statistics dashboard</span>
+                    <span><strong>Advanced stats</strong> - Detailed bot and server analytics</span>
                 </div>
                 <div class="premium-feature">
-                    <span class="premium-icon">💎</span>
-                    <span>Exclusive VelnoX branded embeds</span>
+                    <span class="premium-icon">📢</span>
+                    <span><strong>Announcements</strong> - Send professional server updates</span>
                 </div>
                 <div class="premium-feature">
                     <span class="premium-icon">🚀</span>
-                    <span>Priority support and early features</span>
+                    <span><strong>Boost tracking</strong> - See who's supporting your server</span>
                 </div>
                 <div class="premium-feature">
-                    <span class="premium-icon">✨</span>
-                    <span>Stand out with premium badge</span>
+                    <span class="premium-icon">🎨</span>
+                    <span><strong>Color roles</strong> - Create custom colored roles</span>
+                </div>
+                <div class="premium-feature">
+                    <span class="premium-icon">⭐</span>
+                    <span><strong>Reaction roles</strong> - Advanced role assignment system</span>
+                </div>
+                <div class="premium-feature">
+                    <span class="premium-icon">💎</span>
+                    <span><strong>VelnoX badge</strong> - Stand out with exclusive branding</span>
                 </div>
             </div>
         </div>
@@ -515,9 +737,13 @@
 
     <footer>
         <p>&copy; 2025 Velno & VelnoX Bot. Built with ❤️ by AdminPranav</p>
+        <p style="color: #00D9FF; font-size: 14px; margin-top: 10px;">
+            45+ Commands • 6 Casino Games • Advanced Economy • Full Moderation Suite
+        </p>
         <div class="footer-links">
             <a href="https://discord.gg/your-server">Support Server</a>
             <a href="https://github.com/AdminPranav/velno-bot">GitHub</a>
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1431927437746503700&permissions=8&scope=bot%20applications.commands">Add Bot</a>
         </div>
     </footer>
 
@@ -544,17 +770,18 @@
 
         document.querySelectorAll('.command-item').forEach(item => {
             item.addEventListener('click', function() {
-                const command = this.textContent;
-                navigator.clipboard.writeText(command);
+                const commandName = this.querySelector('.command-name').textContent;
+                navigator.clipboard.writeText(commandName);
                 
-                const original = this.textContent;
-                this.textContent = '✓ Copied!';
-                this.style.color = '#00FF88';
+                const desc = this.querySelector('.command-desc');
+                const originalText = desc.textContent;
+                desc.textContent = '✓ Copied to clipboard!';
+                desc.style.color = '#00FF88';
                 
                 setTimeout(() => {
-                    this.textContent = original;
-                    this.style.color = '#00FF88';
-                }, 1000);
+                    desc.textContent = originalText;
+                    desc.style.color = '#888';
+                }, 1500);
             });
         });
     </script>
