@@ -457,8 +457,6 @@ async function handleCommand(message, cmd, args) {
         await user.save();
 
         const embed = createEmbed(member, "🔥 ROASTED! 🔥", target.toString() + "\n\n" + roast)
-
-" + roast)
             .setColor("#FF4444");
 
         return message.reply({ embeds: [embed] });
@@ -480,9 +478,7 @@ async function handleCommand(message, cmd, args) {
         user.lastCompliment = new Date();
         await user.save();
 
-        const embed = createEmbed(member, "💖 COMPLIMENT! 💖", target.toString() + "
-
-" + compliment)
+        const embed = createEmbed(member, "💖 COMPLIMENT! 💖", target.toString() + "\n\n" + compliment)
             .setColor(CONFIG.COLORS.success);
 
         return message.reply({ embeds: [embed] });
@@ -1164,4 +1160,5 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error("❌ LOGIN FAILED!");
     console.error(err);
 });
+
 
