@@ -456,7 +456,7 @@ async function handleCommand(message, cmd, args) {
         user.roastCount += 1;
         await user.save();
 
-        const embed = createEmbed(member, "🔥 ROASTED! 🔥", target.toString() + "
+        const embed = createEmbed(member, "🔥 ROASTED! 🔥", target.toString() + "\n\n" + roast)
 
 " + roast)
             .setColor("#FF4444");
@@ -1164,3 +1164,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error("❌ LOGIN FAILED!");
     console.error(err);
 });
+
