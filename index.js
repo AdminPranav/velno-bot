@@ -6,21 +6,69 @@ const path = require('path');
 const cron = require('node-cron');
 const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-    console.log('💰 Velno Bot Connected to MongoDB!');
-}).catch(err => console.error('❌ DB Error:', err));
+// MongoDB Connection with Retry Logic
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000,
+        });
+        console.log('💰 Velno Bot Connected to MongoDB!');
+    } catch (err) {
+        console.error('❌ DB Connection Failed:', err.message);
+        console.log('Retrying in 5 seconds...');
+        setTimeout(connectDB, 5000);
+    }
+};
 
+connectDB();
+
+// Express Server
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Velno Bot - Online</title>
+            <style>
+                body { font-family: Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                       color: white; display: flex; align-items: center; justify-content: center; 
+                       min-height: 100vh; margin: 0; text-align: center; }
+                .container { background: rgba(255,255,255,0.1); padding: 3rem; border-radius: 20px; 
+                            backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+                h1 { font-size: 3rem; margin-bottom: 1rem; }
+                .status { background: #00FF88; color: #000; padding: 0.5rem 1.5rem; 
+                         border-radius: 25px; font-weight: bold; display: inline-block; margin: 1rem 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🤖 Velno Bot</h1>
+                <div class="status">✅ ONLINE</div>
+                <p>50+ Commands • Economy • Casino • Business</p>
+                <p style="opacity: 0.8; margin-top: 2rem;">Smart. Simple. Steady.</p>
+            </div>
+        </body>
+        </html>
+    `);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'online', 
+        uptime: process.uptime(),
+        bot: client.user ? client.user.tag : 'Starting...'
+    });
+});
+
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('🌐 Web server running on port ' + PORT);
+}).on('error', (err) => {
+    console.error('❌ Express Error:', err);
 });
 
 const CONFIG = {
@@ -161,34 +209,7 @@ const roastLines = [
     "Bhen ke takke, tera brain toh airplane mode pe hai – signal zero.",
     "Saale, tu itna loser hai ki Ludo mein bhi CPU se haar jata hai.",
     "Chutiye, tera sense of humor toh teri behen ke jokes se bhi bura hai.",
-    "Madarchod, tu itna ugly hai ki mirror bhi toot jata hai tujhe dekh ke.",
-    "Bhenchod, tera dimaag toh teri maa ke pairon tale dab gaya tha.",
-    "Saale randwa, tu itna lazy hai ki bed bhi bolta hai – Uth ja!",
-    "Chut ka diwana, tera life toh failure ka encyclopedia hai.",
-    "Madarchod, tu itna cringy hai ki TikTok bhi tujhe ban kar de.",
-    "Bhen ke lode, tera face dekh ke toh camera bhi bolta hai – No thanks!",
-    "Saale, tu itna bhayankar hai ki bhoot bhi tujhse dar jaye.",
-    "Chutiye, tera IQ toh temperature se bhi kam hai – minus mein.",
-    "Madarchod, tu itna fake smile deta hai ki teri behen bhi has nahi paati.",
-    "Bhenchod, tera style toh 90s ke villain se bhi bura hai.",
-    "Saale harami, tu itna irritating hai ki mosquito bhi tujhse door bhagta hai.",
-    "Chut ka pujari, tera brain toh RAM se bhi kam hai – 2MB.",
-    "Madarchod, tu itna useless hai ki dustbin bhi tujhe nahi leti.",
-    "Bhen ke takke, tera face dekh ke toh beauty filter crash ho jata hai.",
-    "Saale, tu itna dumb hai ki 2+2=5 bolta hai aur proud feel karta hai.",
-    "Chutiye, tera life mein itna drama hai ki Ekta Kapoor bhi jealous ho jaye.",
-    "Madarchod, tu itna slow hai ki snail bhi tujhe race mein hara de.",
-    "Bhenchod, tera dimaag toh Google se bhi chhota hai – no results.",
-    "Saale randwa, tu itna kanjoos hai ki 1 rupee ka coin bhi do baar dekhta hai.",
-    "Chut ka diwana, tera face toh horror movie ka villain lagta hai.",
-    "Madarchod, tu itna lazy hai ki Ctrl+Z bhi dabane ki himmat nahi.",
-    "Bhen ke lode, tera sense of humor toh dad jokes se bhi expired hai.",
-    "Saale, tu itna bhayankar singer hai ki bathroom bhi bolta hai – Bahar ga!",
-    "Chutiye, tera life toh Loading... pe atka hua hai – 100% kabhi nahi hoga.",
-    "Madarchod, tu itna fake hai ki plastic bhi tujhse sharma jaye.",
-    "Bhenchod, tera IQ toh zero se bhi neeche – negative infinity.",
-    "Saale haramzade, tu itna cringy hai ki cringe compilation mein top pe hai.",
-    "Chut ka pujari, tera face dekh ke toh mirror bhi bolta hai – Bhai, mat dikha!"
+    "Madarchod, tu itna ugly hai ki mirror bhi toot jata hai tujhe dekh ke."
 ];
 
 const complimentLines = [
@@ -281,7 +302,6 @@ client.once(Events.ClientReady, (readyClient) => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
-    const isPremium = isPremiumUser(message.member);
     let commandName, args;
 
     if (message.content.startsWith(CONFIG.PREFIX)) {
@@ -304,7 +324,7 @@ async function handleCommand(message, cmd, args) {
     const member = message.member;
     const isPremium = isPremiumUser(member);
 
-    // ========== PAGINATED HELP COMMAND ==========
+    // ========== HELP COMMAND ==========
     if (cmd === 'help') {
         const pages = [
             createEmbed(member, "💰 Economy (Page 1/6)", null)
@@ -318,8 +338,7 @@ async function handleCommand(message, cmd, args) {
                     { name: "!steal @user", value: "Steal (10min)", inline: true },
                     { name: "!daily", value: "Daily reward (24h)", inline: true },
                     { name: "!lb", value: "Top 10 rich", inline: true }
-                )
-                .setColor(CONFIG.COLORS.velno),
+                ),
 
             createEmbed(member, "🏢 Business (Page 2/6)", null)
                 .addFields(
@@ -328,28 +347,24 @@ async function handleCommand(message, cmd, args) {
                     { name: "!hire @user", value: "Hire employee", inline: true },
                     { name: "!upgrade", value: "Upgrade level", inline: true }
                 )
-                .setDescription("💹 Passive income every hour!")
-                .setColor(CONFIG.COLORS.velno),
+                .setDescription("💹 Passive income every hour!"),
 
             createEmbed(member, "🎰 Casino (Page 3/6)", null)
                 .addFields(
                     { name: "!coinflip <bet>", value: "50/50 (3s)", inline: true },
                     { name: "!dice <bet>", value: "Roll dice (3s)", inline: true },
                     { name: "!slot <bet>", value: "5x jackpot (5s)", inline: true },
-                    { name: "!blackjack <bet>", value: "Get 21 (10s)", inline: true },
                     { name: "!jackpot <bet>", value: "2% mega (5s)", inline: true }
                 )
-                .setDescription("🎊 Animated games with rewards!")
-                .setColor(CONFIG.COLORS.velno),
+                .setDescription("🎊 Animated games with rewards!"),
 
             createEmbed(member, "🎭 Fun (Page 4/6)", null)
                 .addFields(
-                    { name: "!roast [@user]", value: "42 roasts (30s)", inline: true },
+                    { name: "!roast [@user]", value: "Roasts (30s)", inline: true },
                     { name: "!compliment [@user]", value: "Nice words (30s)", inline: true },
                     { name: "!joke", value: "Random joke", inline: true },
                     { name: "!quote", value: "Inspiration", inline: true }
-                )
-                .setColor(CONFIG.COLORS.velno),
+                ),
 
             createEmbed(member, "🛡️ Moderation (Page 5/6)", null)
                 .addFields(
@@ -361,8 +376,7 @@ async function handleCommand(message, cmd, args) {
                     { name: "!unmute @user", value: "Unmute member", inline: true },
                     { name: "!lock", value: "Lock channel", inline: true },
                     { name: "!unlock", value: "Unlock channel", inline: true }
-                )
-                .setColor(CONFIG.COLORS.velno),
+                ),
 
             createEmbed(member, "📂 Utility (Page 6/6)", null)
                 .addFields(
@@ -370,37 +384,31 @@ async function handleCommand(message, cmd, args) {
                     { name: "!serverinfo", value: "Server details", inline: true },
                     { name: "!userinfo [@user]", value: "User info", inline: true },
                     { name: "!uptime", value: "Bot uptime", inline: true },
-                    { name: "!invite", value: "Invite link", inline: true },
-                    { name: "!joke", value: "Joke", inline: true }
+                    { name: "!invite", value: "Invite link", inline: true }
                 )
                 .setDescription("🛠️ General utilities!")
-                .setColor(CONFIG.COLORS.velno)
         ];
 
         let currentPage = 0;
 
         const getButtons = (page) => {
             const row = new ActionRowBuilder();
-
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId("prev")
                     .setLabel("◀ Previous")
                     .setStyle(ButtonStyle.Primary)
                     .setDisabled(page === 0),
-
                 new ButtonBuilder()
                     .setCustomId("next")
                     .setLabel("Next ▶")
                     .setStyle(ButtonStyle.Primary)
                     .setDisabled(page === pages.length - 1),
-
                 new ButtonBuilder()
                     .setCustomId("delete")
                     .setLabel("❌ Close")
                     .setStyle(ButtonStyle.Danger)
             );
-
             return row;
         };
 
@@ -423,7 +431,6 @@ async function handleCommand(message, cmd, args) {
                 await helpMessage.delete();
                 return;
             }
-
             await interaction.update({
                 embeds: [pages[currentPage]],
                 components: [getButtons(currentPage)]
@@ -484,7 +491,7 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
-    // ========== ECONOMY COMMANDS ==========
+    // ========== WORK COMMAND ==========
     if (cmd === "work") {
         const user = await getUser(message.author.id, message.author.username);
         const cooldown = checkCooldown(user.lastWork, CONFIG.COOLDOWNS.work);
@@ -503,12 +510,12 @@ async function handleCommand(message, cmd, args) {
         const jobs = ["coded a website", "debugged code", "deployed an app", "fixed a server", "designed a UI", "wrote docs"];
         const job = jobs[Math.floor(Math.random() * jobs.length)];
 
-        const embed = createEmbed(member, "💼 Work Complete!", "You " + job + " and earned **" + formatMoney(earnings) + "**!
-
-💰 Wallet: " + formatMoney(user.wallet));
+        const embed = createEmbed(member, "💼 Work Complete!", 
+            "You " + job + " and earned **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== BALANCE COMMAND ==========
     if (cmd === "balance" || cmd === "bal") {
         const targetUser = message.mentions.users.first() || message.author;
         const user = await getUser(targetUser.id, targetUser.username);
@@ -527,6 +534,7 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== DEPOSIT COMMAND ==========
     if (cmd === "deposit" || cmd === "dep") {
         const user = await getUser(message.author.id, message.author.username);
         let amount = parseInt(args[0]);
@@ -539,13 +547,12 @@ async function handleCommand(message, cmd, args) {
         user.bank += amount;
         await user.save();
 
-        const embed = createEmbed(member, "🏦 Deposit Success", "Deposited **" + formatMoney(amount) + "**
-
-💵 Wallet: " + formatMoney(user.wallet) + "
-🏦 Bank: " + formatMoney(user.bank));
+        const embed = createEmbed(member, "🏦 Deposit Success", 
+            "Deposited **" + formatMoney(amount) + "**\n\n💵 Wallet: " + formatMoney(user.wallet) + "\n🏦 Bank: " + formatMoney(user.bank));
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== WITHDRAW COMMAND ==========
     if (cmd === "withdraw" || cmd === "with") {
         const user = await getUser(message.author.id, message.author.username);
         let amount = parseInt(args[0]);
@@ -558,13 +565,12 @@ async function handleCommand(message, cmd, args) {
         user.wallet += amount;
         await user.save();
 
-        const embed = createEmbed(member, "💵 Withdrawal Success", "Withdrew **" + formatMoney(amount) + "**
-
-💵 Wallet: " + formatMoney(user.wallet) + "
-🏦 Bank: " + formatMoney(user.bank));
+        const embed = createEmbed(member, "💵 Withdrawal Success", 
+            "Withdrew **" + formatMoney(amount) + "**\n\n💵 Wallet: " + formatMoney(user.wallet) + "\n🏦 Bank: " + formatMoney(user.bank));
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== ROB COMMAND ==========
     if (cmd === "rob") {
         const user = await getUser(message.author.id, message.author.username);
         const cooldown = checkCooldown(user.lastRob, CONFIG.COOLDOWNS.rob);
@@ -580,12 +586,12 @@ async function handleCommand(message, cmd, args) {
         user.lastRob = new Date();
         await user.save();
 
-        const embed = createEmbed(member, "🦹 Quick Rob!", "You stole **" + formatMoney(earnings) + "**!
-
-💰 Wallet: " + formatMoney(user.wallet));
+        const embed = createEmbed(member, "🦹 Quick Rob!", 
+            "You stole **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== CRIME COMMAND ==========
     if (cmd === "crime") {
         const user = await getUser(message.author.id, message.author.username);
         const cooldown = checkCooldown(user.lastCrime, CONFIG.COOLDOWNS.crime);
@@ -604,9 +610,8 @@ async function handleCommand(message, cmd, args) {
             user.lastCrime = new Date();
             await user.save();
 
-            const embed = createEmbed(member, "🎭 Crime Success!", "You earned **" + formatMoney(earnings) + "**!
-
-💰 Wallet: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎭 Crime Success!", 
+                "You earned **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
             return message.reply({ embeds: [embed] });
         } else {
             const fine = Math.floor(Math.random() * 301) + 100;
@@ -616,13 +621,13 @@ async function handleCommand(message, cmd, args) {
             user.lastCrime = new Date();
             await user.save();
 
-            const embed = createEmbed(member, "🚔 Crime Failed!", "You got caught! Fined **" + formatMoney(actualFine) + "**!
-
-💰 Wallet: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🚔 Crime Failed!", 
+                "You got caught! Fined **" + formatMoney(actualFine) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
             return message.reply({ embeds: [embed] });
         }
     }
 
+    // ========== DAILY COMMAND ==========
     if (cmd === "daily") {
         const user = await getUser(message.author.id, message.author.username);
         const cooldown = checkCooldown(user.lastDaily, CONFIG.COOLDOWNS.daily);
@@ -638,19 +643,18 @@ async function handleCommand(message, cmd, args) {
         user.lastDaily = new Date();
         await user.save();
 
-        const embed = createEmbed(member, "🎁 Daily Reward!", "You claimed **" + formatMoney(reward) + "**!
-
-💰 Wallet: " + formatMoney(user.wallet));
+        const embed = createEmbed(member, "🎁 Daily Reward!", 
+            "You claimed **" + formatMoney(reward) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== LEADERBOARD COMMAND ==========
     if (cmd === "lb") {
         const topUsers = await User.find().sort({ wallet: -1 }).limit(10);
 
         let lb = "";
         topUsers.forEach((u, i) => {
-            lb += (i + 1) + ". **" + u.username + "** - " + formatMoney(u.wallet + u.bank) + "
-";
+            lb += (i + 1) + ". **" + u.username + "** - " + formatMoney(u.wallet + u.bank) + "\n";
         });
 
         const embed = createEmbed(member, "📊 Top 10 Richest", lb || "No data yet");
@@ -682,10 +686,8 @@ async function handleCommand(message, cmd, args) {
         user.businessId = bizId;
         await user.save();
 
-        const embed = createEmbed(member, "🏢 Business Created!", "**" + bizName + "**
-
-Cost: 5000 V-Coins
-Wallet: " + formatMoney(user.wallet));
+        const embed = createEmbed(member, "🏢 Business Created!", 
+            "**" + bizName + "**\n\nCost: 5000 V-Coins\nWallet: " + formatMoney(user.wallet));
         return message.reply({ embeds: [embed] });
     }
 
@@ -724,9 +726,8 @@ Wallet: " + formatMoney(user.wallet));
         business.employees.push(target.id);
         await business.save();
 
-        const embed = createEmbed(member, "💼 Employee Hired!", target.tag + " now works for " + business.name + "!
-
-💰 20% of profits every hour!");
+        const embed = createEmbed(member, "💼 Employee Hired!", 
+            target.tag + " now works for " + business.name + "!\n\n💰 20% of profits every hour!");
         return message.reply({ embeds: [embed] });
     }
 
@@ -747,10 +748,8 @@ Wallet: " + formatMoney(user.wallet));
         await user.save();
         await business.save();
 
-        const embed = createEmbed(member, "⬆️ Business Upgraded!", business.name + " is now Level " + business.level + "!
-
-💰 Profit/Hour: " + formatMoney(business.level * 100) + "
-💵 Wallet: " + formatMoney(user.wallet));
+        const embed = createEmbed(member, "⬆️ Business Upgraded!", 
+            business.name + " is now Level " + business.level + "!\n\n💰 Profit/Hour: " + formatMoney(business.level * 100) + "\n💵 Wallet: " + formatMoney(user.wallet));
         return message.reply({ embeds: [embed] });
     }
 
@@ -765,6 +764,7 @@ Wallet: " + formatMoney(user.wallet));
         let bet = parseInt(args[0]);
         if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
 
+        user.lastCoinflip = new Date();
         const win = Math.random() > 0.5;
 
         if (win) {
@@ -776,8 +776,7 @@ Wallet: " + formatMoney(user.wallet));
             const embed = new EmbedBuilder()
                 .setColor(CONFIG.COLORS.success)
                 .setTitle("🪙 YOU WIN!")
-                .setDescription("**Won:** " + formatMoney(bet) + "
-💰 Balance: " + formatMoney(user.wallet))
+                .setDescription("**Won:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet))
                 .setFooter({ text: "VelnoX • Cool mind. Sharp code." })
                 .setTimestamp();
 
@@ -791,8 +790,7 @@ Wallet: " + formatMoney(user.wallet));
             const embed = new EmbedBuilder()
                 .setColor(CONFIG.COLORS.error)
                 .setTitle("🪙 YOU LOSE!")
-                .setDescription("**Lost:** " + formatMoney(bet) + "
-💰 Balance: " + formatMoney(user.wallet))
+                .setDescription("**Lost:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet))
                 .setFooter({ text: "VelnoX • Cool mind. Sharp code." })
                 .setTimestamp();
 
@@ -810,6 +808,7 @@ Wallet: " + formatMoney(user.wallet));
         let bet = parseInt(args[0]);
         if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
 
+        user.lastDice = new Date();
         const playerRoll = Math.floor(Math.random() * 6) + 1;
         const botRoll = Math.floor(Math.random() * 6) + 1;
 
@@ -819,9 +818,8 @@ Wallet: " + formatMoney(user.wallet));
             user.gamesWon += 1;
             await user.save();
 
-            const embed = createEmbed(member, "🎲 YOU WIN!", "You: " + playerRoll + " | Bot: " + botRoll + "
-**Won:** " + formatMoney(bet) + "
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎲 YOU WIN!", 
+                "You: " + playerRoll + " | Bot: " + botRoll + "\n**Won:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.success);
             return message.reply({ embeds: [embed] });
         } else if (playerRoll < botRoll) {
@@ -830,15 +828,14 @@ Wallet: " + formatMoney(user.wallet));
             user.gamesLost += 1;
             await user.save();
 
-            const embed = createEmbed(member, "🎲 YOU LOSE!", "You: " + playerRoll + " | Bot: " + botRoll + "
-**Lost:** " + formatMoney(bet) + "
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎲 YOU LOSE!", 
+                "You: " + playerRoll + " | Bot: " + botRoll + "\n**Lost:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.error);
             return message.reply({ embeds: [embed] });
         } else {
-            const embed = createEmbed(member, "🎲 TIE!", "You: " + playerRoll + " | Bot: " + botRoll + "
-**No money lost or won**
-💰 Balance: " + formatMoney(user.wallet));
+            await user.save();
+            const embed = createEmbed(member, "🎲 TIE!", 
+                "You: " + playerRoll + " | Bot: " + botRoll + "\n**No money lost or won**\n💰 Balance: " + formatMoney(user.wallet));
             return message.reply({ embeds: [embed] });
         }
     }
@@ -853,6 +850,7 @@ Wallet: " + formatMoney(user.wallet));
         let bet = parseInt(args[0]);
         if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
 
+        user.lastSlot = new Date();
         const symbols = ["🍎", "🍊", "🍋", "🍌", "🍉", "7️⃣"];
         const roll1 = symbols[Math.floor(Math.random() * symbols.length)];
         const roll2 = symbols[Math.floor(Math.random() * symbols.length)];
@@ -867,10 +865,8 @@ Wallet: " + formatMoney(user.wallet));
             user.gamesWon += 1;
             await user.save();
 
-            const embed = createEmbed(member, "🎰 JACKPOT!!!", result + "
-
-🎉 YOU WON **" + formatMoney(winnings) + "**!
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎰 JACKPOT!!!", 
+                result + "\n\n🎉 YOU WON **" + formatMoney(winnings) + "**!\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.success);
             return message.reply({ embeds: [embed] });
         } else if (roll1 === roll2 || roll2 === roll3) {
@@ -880,10 +876,8 @@ Wallet: " + formatMoney(user.wallet));
             user.gamesWon += 1;
             await user.save();
 
-            const embed = createEmbed(member, "🎰 TWO MATCH!", result + "
-
-✨ Won **" + formatMoney(winnings) + "**!
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎰 TWO MATCH!", 
+                result + "\n\n✨ Won **" + formatMoney(winnings) + "**!\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.success);
             return message.reply({ embeds: [embed] });
         } else {
@@ -892,10 +886,8 @@ Wallet: " + formatMoney(user.wallet));
             user.gamesLost += 1;
             await user.save();
 
-            const embed = createEmbed(member, "🎰 NO MATCH", result + "
-
-❌ Lost **" + formatMoney(bet) + "**!
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎰 NO MATCH", 
+                result + "\n\n❌ Lost **" + formatMoney(bet) + "**!\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.error);
             return message.reply({ embeds: [embed] });
         }
@@ -912,6 +904,7 @@ Wallet: " + formatMoney(user.wallet));
         let bet = parseInt(args[0]);
         if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
 
+        user.lastJackpot = new Date();
         const jackpotChance = Math.random();
 
         if (jackpotChance < 0.02) {
@@ -924,8 +917,8 @@ Wallet: " + formatMoney(user.wallet));
             await user.save();
             await global.save();
 
-            const embed = createEmbed(member, "💎 MEGA JACKPOT!!!", "🎊 YOU WON **" + formatMoney(jackpot) + "**!!!
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "💎 MEGA JACKPOT!!!", 
+                "🎊 YOU WON **" + formatMoney(jackpot) + "**!!!\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor("#FFD700");
             return message.reply({ embeds: [embed] });
         } else {
@@ -937,9 +930,8 @@ Wallet: " + formatMoney(user.wallet));
             await user.save();
             await global.save();
 
-            const embed = createEmbed(member, "🎲 Jackpot", "Pool: **" + formatMoney(global.jackpot) + "**
-❌ Lost **" + formatMoney(bet) + "**!
-💰 Balance: " + formatMoney(user.wallet));
+            const embed = createEmbed(member, "🎲 Jackpot", 
+                "Pool: **" + formatMoney(global.jackpot) + "**\n❌ Lost **" + formatMoney(bet) + "**!\n💰 Balance: " + formatMoney(user.wallet));
             embed.setColor(CONFIG.COLORS.error);
             return message.reply({ embeds: [embed] });
         }
@@ -950,8 +942,8 @@ Wallet: " + formatMoney(user.wallet));
         const sent = await message.reply("🏓 Pinging...");
         const latency = sent.createdTimestamp - message.createdTimestamp;
 
-        const embed = createEmbed(member, "🏓 Pong!", "**Bot:** " + latency + "ms
-**API:** " + client.ws.ping + "ms");
+        const embed = createEmbed(member, "🏓 Pong!", 
+            "**Bot:** " + latency + "ms\n**API:** " + client.ws.ping + "ms");
         return sent.edit({ content: null, embeds: [embed] });
     }
 
@@ -1021,15 +1013,18 @@ Wallet: " + formatMoney(user.wallet));
         const minutes = Math.floor(uptime / 60) % 60;
         const seconds = Math.floor(uptime % 60);
 
-        const embed = createEmbed(member, "⏰ Bot Uptime", days + "d " + hours + "h " + minutes + "m " + seconds + "s");
+        const embed = createEmbed(member, "⏰ Bot Uptime", 
+            days + "d " + hours + "h " + minutes + "m " + seconds + "s");
         return message.reply({ embeds: [embed] });
     }
 
     if (cmd === "invite") {
-        const embed = createEmbed(member, "📬 Invite Velno", "[Click here to invite](https://discord.com/api/oauth2/authorize?client_id=" + CONFIG.CLIENT_ID + "&permissions=8&scope=bot%20applications.commands)");
+        const embed = createEmbed(member, "📬 Invite Velno", 
+            "[Click here to invite](https://discord.com/api/oauth2/authorize?client_id=" + CONFIG.CLIENT_ID + "&permissions=8&scope=bot%20applications.commands)");
         return message.reply({ embeds: [embed] });
     }
 
+    // ========== MODERATION COMMANDS ==========
     if (cmd === "warn") {
         if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
             return message.reply("❌ You need ModerateMembers permission!");
@@ -1044,14 +1039,11 @@ Wallet: " + formatMoney(user.wallet));
         await user.save();
 
         try {
-            await target.send("⚠️ Warned in **" + message.guild.name + "**
-Reason: " + reason + "
-Warns: " + user.warns);
+            await target.send("⚠️ Warned in **" + message.guild.name + "**\nReason: " + reason + "\nWarns: " + user.warns);
         } catch {}
 
-        const embed = createEmbed(member, "✅ User Warned", "**User:** " + target.user.tag + "
-**Reason:** " + reason + "
-**Warns:** " + user.warns);
+        const embed = createEmbed(member, "✅ User Warned", 
+            "**User:** " + target.user.tag + "\n**Reason:** " + reason + "\n**Warns:** " + user.warns);
         return message.reply({ embeds: [embed] });
     }
 
@@ -1066,8 +1058,8 @@ Warns: " + user.warns);
         const reason = args.slice(1).join(" ") || "No reason";
         await target.kick(reason);
 
-        const embed = createEmbed(member, "✅ User Kicked", "**User:** " + target.user.tag + "
-**Reason:** " + reason);
+        const embed = createEmbed(member, "✅ User Kicked", 
+            "**User:** " + target.user.tag + "\n**Reason:** " + reason);
         return message.reply({ embeds: [embed] });
     }
 
@@ -1082,8 +1074,8 @@ Warns: " + user.warns);
         const reason = args.slice(1).join(" ") || "No reason";
         await target.ban({ reason });
 
-        const embed = createEmbed(member, "✅ User Banned", "**User:** " + target.user.tag + "
-**Reason:** " + reason);
+        const embed = createEmbed(member, "✅ User Banned", 
+            "**User:** " + target.user.tag + "\n**Reason:** " + reason);
         return message.reply({ embeds: [embed] });
     }
 
@@ -1095,10 +1087,11 @@ Warns: " + user.warns);
         const amount = parseInt(args[0]) || 10;
         if (amount < 1 || amount > 100) return message.reply("❌ Clear 1-100 messages!");
 
-        await message.channel.bulkDelete(amount);
+        await message.channel.bulkDelete(amount + 1);
 
         const embed = createEmbed(member, "✅ Cleared", "Deleted **" + amount + "** messages!");
-        return message.reply({ embeds: [embed] });
+        const msg = await message.channel.send({ embeds: [embed] });
+        setTimeout(() => msg.delete().catch(() => {}), 3000);
     }
 
     if (cmd === "mute") {
@@ -1156,9 +1149,40 @@ Warns: " + user.warns);
     }
 }
 
+// ========== BOT LOGIN ==========
 client.login(CONFIG.TOKEN).catch(err => {
     console.error("❌ LOGIN FAILED!");
-    console.error(err);
+    console.error("Error:", err.message);
+    
+    if (err.message.includes('token')) {
+        console.error("⚠️  CHECK YOUR TOKEN IN .env FILE!");
+    }
+    
+    if (err.message.includes('intents')) {
+        console.error("⚠️  ENABLE INTENTS IN DISCORD DEVELOPER PORTAL!");
+    }
+    
+    process.exit(1);
 });
 
+// ========== GRACEFUL SHUTDOWN ==========
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    server.close(() => {
+        console.log('Server closed');
+        mongoose.connection.close(false, () => {
+            console.log('MongoDB connection closed');
+            process.exit(0);
+        });
+    });
+});
 
+// ========== ERROR HANDLERS ==========
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+});
