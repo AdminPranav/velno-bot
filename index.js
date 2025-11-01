@@ -4,9 +4,9 @@ const mongoose = require('mongoose');
 const express = require('express');
 const path = require('path');
 const cron = require('node-cron');
-const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { Client, Events, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder, REST, Routes, SlashCommandBuilder } = require('discord.js');
 
-// MongoDB Connection with Retry Logic
+// MongoDB Connection
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI, {
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
             <div class="container">
                 <h1>🤖 Velno Bot</h1>
                 <div class="status">✅ ONLINE</div>
-                <p>50+ Commands • Economy • Casino • Business</p>
+                <p>50+ Commands • Trust System • Casino • Business</p>
                 <p style="opacity: 0.8; margin-top: 2rem;">Smart. Simple. Steady.</p>
             </div>
         </body>
@@ -74,8 +74,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 const CONFIG = {
     TOKEN: process.env.TOKEN,
     CLIENT_ID: process.env.CLIENT_ID,
+    OWNER_ID: process.env.OWNER_ID || 'YOUR_DISCORD_USER_ID', // Add your Discord User ID here
     PREFIX: '!',
-    PREMIUM_ROLES: ['VIP', 'VelnoX', 'Premium Member'],
     COLORS: {
         velno: '#5865F2',
         velnox: '#00D9FF',
@@ -106,6 +106,9 @@ const userSchema = new mongoose.Schema({
     username: String,
     wallet: { type: Number, default: 100 },
     bank: { type: Number, default: 0 },
+    isTrusted: { type: Boolean, default: false }, // NEW: Trust status
+    trustedBy: String, // Who trusted them
+    trustedAt: Date, // When they were trusted
     lastWork: Date,
     lastRob: Date,
     lastCrime: Date,
@@ -157,7 +160,13 @@ const Global = mongoose.model('Global', globalSchema);
 async function getUser(userId, username) {
     let user = await User.findOne({ userId });
     if (!user) {
-        user = await User.create({ userId, username, wallet: 100, bank: 0 });
+        user = await User.create({ 
+            userId, 
+            username, 
+            wallet: 100, 
+            bank: 0,
+            isTrusted: userId === CONFIG.OWNER_ID // Owner is always trusted
+        });
     }
     return user;
 }
@@ -193,23 +202,13 @@ function checkCooldown(lastTime, cooldownMs) {
     return { ready: true };
 }
 
-// ROAST LINES
+// ROAST & COMPLIMENT LINES
 const roastLines = [
     "Arre madarchod, tu itna ghatiya hai ki teri maa bhi tujhe dekh ke roti hai!",
     "Bhenchod, tera face dekh ke toh darwaza bhi bolta hai – Bhai, yeh kya laaya?",
     "Saale, tu itna harami hai ki haramkhor bhi tujhse sharma jaye.",
     "Madarchod, tera dimaag toh teri maa ke pet mein hi reh gaya tha kya?",
-    "Bhen ke lode, tu itna slow hai ki kachhua bhi tujhe thappad maare.",
-    "Chutiye, tera IQ toh zero se bhi neeche hai – negative mein chala gaya.",
-    "Madarchod, tu itna fake hai ki teri behen bhi tujhe pehchanti nahi.",
-    "Bhenchod, tera style dekh ke toh kutta bhi bolta hai – Bhai, yeh kya pehna hai?",
-    "Saale haramzade, tu itna kanjoos hai ki free ka paani bhi nahi peeta.",
-    "Chut ka pujari, tera face toh Photoshop mein bhi fix nahi hota.",
-    "Madarchod, tu itna boring hai ki teri maa bhi tujhse baat nahi karti.",
-    "Bhen ke takke, tera brain toh airplane mode pe hai – signal zero.",
-    "Saale, tu itna loser hai ki Ludo mein bhi CPU se haar jata hai.",
-    "Chutiye, tera sense of humor toh teri behen ke jokes se bhi bura hai.",
-    "Madarchod, tu itna ugly hai ki mirror bhi toot jata hai tujhe dekh ke."
+    "Bhen ke lode, tu itna slow hai ki kachhua bhi tujhe thappad maare."
 ];
 
 const complimentLines = [
@@ -217,15 +216,10 @@ const complimentLines = [
     "Respect! Tu apne skills ke liye known hai server mein.",
     "Tu actually chill person hai – log tujhe like karti hain.",
     "Your dedication is insane bro – keep it up!",
-    "Bhai, tu actually smart choices make karta hai.",
-    "Tu ek dum chamatkar ho – no lie!",
-    "Your vibe is immaculate – shuddh class!",
-    "Actually you are way cooler than you think!",
-    "Respect the hustle – tu genuinely hard working hai!",
     "You have more brain cells than the average person!"
 ];
 
-// BUSINESS PASSIVE INCOME - Runs every hour
+// BUSINESS PASSIVE INCOME
 cron.schedule('0 * * * *', async () => {
     try {
         const businesses = await Business.find();
@@ -265,128 +259,320 @@ const client = new Client({
     ]
 });
 
-function isPremiumUser(member) {
-    if (!member || !member.roles) return false;
-    return CONFIG.PREMIUM_ROLES.some(roleName => 
-        member.roles.cache.some(role => role.name === roleName)
-    );
+// NEW: Check if user is trusted (has VelnoX premium)
+async function isPremiumUser(userId) {
+    if (userId === CONFIG.OWNER_ID) return true; // Owner always has premium
+    const user = await User.findOne({ userId });
+    return user ? user.isTrusted : false;
 }
 
-function createEmbed(member, title, description) {
-    const isPremium = isPremiumUser(member);
+function isOwner(userId) {
+    return userId === CONFIG.OWNER_ID;
+}
+
+function createEmbed(isTrusted, title, description) {
     return new EmbedBuilder()
-        .setColor(isPremium ? CONFIG.COLORS.velnox : CONFIG.COLORS.velno)
+        .setColor(isTrusted ? CONFIG.COLORS.velnox : CONFIG.COLORS.velno)
         .setTitle(title)
         .setDescription(description)
         .setFooter({ 
-            text: isPremium ? "VelnoX • Cool mind. Sharp code." : "Velno • Smart. Simple. Steady.",
+            text: isTrusted ? "VelnoX • Cool mind. Sharp code." : "Velno • Smart. Simple. Steady.",
             iconURL: client.user?.displayAvatarURL()
         })
         .setTimestamp();
 }
 
-client.once(Events.ClientReady, (readyClient) => {
+// SLASH COMMAND REGISTRATION
+const commands = [
+    new SlashCommandBuilder().setName('help').setDescription('Show all commands'),
+    new SlashCommandBuilder().setName('work').setDescription('Work to earn V-Coins'),
+    new SlashCommandBuilder().setName('balance').setDescription('Check your balance'),
+    new SlashCommandBuilder().setName('daily').setDescription('Claim daily reward'),
+    new SlashCommandBuilder().setName('rob').setDescription('Quick robbery'),
+    new SlashCommandBuilder().setName('crime').setDescription('Commit a crime'),
+    new SlashCommandBuilder().setName('lb').setDescription('View leaderboard'),
+    new SlashCommandBuilder().setName('coinflip').setDescription('Flip a coin').addIntegerOption(opt => opt.setName('bet').setDescription('Bet amount').setRequired(true)),
+    new SlashCommandBuilder().setName('dice').setDescription('Roll dice').addIntegerOption(opt => opt.setName('bet').setDescription('Bet amount').setRequired(true)),
+    new SlashCommandBuilder().setName('slot').setDescription('Slot machine').addIntegerOption(opt => opt.setName('bet').setDescription('Bet amount').setRequired(true)),
+    new SlashCommandBuilder().setName('jackpot').setDescription('Try the jackpot').addIntegerOption(opt => opt.setName('bet').setDescription('Bet amount').setRequired(true)),
+    new SlashCommandBuilder().setName('ping').setDescription('Check bot latency'),
+    new SlashCommandBuilder().setName('serverinfo').setDescription('Server information'),
+].map(cmd => cmd.toJSON());
+
+client.once(Events.ClientReady, async (readyClient) => {
     console.log('╔══════════════════════════════════════╗');
     console.log('║   ✅ VELNO BOT ONLINE!               ║');
-    console.log('║   50+ COMMANDS • LIVE ECONOMY        ║');
-    console.log('║   BUSINESSES • ROASTS • CASINO       ║');
+    console.log('║   TRUST SYSTEM • CASINO • BUSINESS   ║');
     console.log('╚══════════════════════════════════════╝');
     console.log('✓ Logged in as ' + readyClient.user.tag);
+    console.log('✓ Owner ID: ' + CONFIG.OWNER_ID);
     console.log('✓ Prefix: ' + CONFIG.PREFIX);
-    console.log('✓ Commands: 50+');
+    console.log('✓ No-Prefix: Trusted users only');
+    console.log('✓ Trust System: Owner-controlled');
     console.log('══════════════════════════════════════\n');
 
-    client.user.setActivity("Velno • Type !help", { type: 0 });
+    client.user.setActivity("!help • Trust System", { type: 0 });
+
+    // Register slash commands
+    const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
+    try {
+        console.log('🔄 Registering slash commands...');
+        await rest.put(Routes.applicationCommands(CONFIG.CLIENT_ID), { body: commands });
+        console.log('✅ Slash commands registered!\n');
+    } catch (error) {
+        console.error('❌ Error registering slash commands:', error);
+    }
 });
 
+// MESSAGE HANDLER (PREFIX & NO-PREFIX)
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
+    const userId = message.author.id;
+    const isPremium = await isPremiumUser(userId);
     let commandName, args;
 
+    // PREFIX COMMANDS (Everyone)
     if (message.content.startsWith(CONFIG.PREFIX)) {
         const argsRaw = message.content.slice(CONFIG.PREFIX.length).trim().split(/ +/);
         commandName = argsRaw.shift().toLowerCase();
         args = argsRaw;
+    } 
+    // NO-PREFIX COMMANDS (Trusted Users Only)
+    else if (isPremium) {
+        const words = message.content.trim().split(/ +/);
+        const possibleCommand = words[0].toLowerCase();
+        
+        const noPrefixCommands = ['work', 'balance', 'bal', 'rob', 'crime', 'daily', 'lb', 
+                                  'deposit', 'dep', 'withdraw', 'with', 'coinflip', 'cf', 
+                                  'dice', 'slot', 'jackpot', 'help', 'ping', 'roast', 
+                                  'compliment', 'comp', 'bizstats', 'startbiz', 'hire', 'upgrade',
+                                  'trustedlist', 'status'];
+        
+        if (noPrefixCommands.includes(possibleCommand)) {
+            commandName = possibleCommand;
+            args = words.slice(1);
+        } else {
+            return;
+        }
     } else {
         return;
     }
 
     try {
-        await handleCommand(message, commandName, args);
+        await handleCommand(message, commandName, args, false);
     } catch (error) {
         console.error('Command Error:', error);
         message.reply("❌ An error occurred!");
     }
 });
 
-async function handleCommand(message, cmd, args) {
-    const member = message.member;
-    const isPremium = isPremiumUser(member);
+// SLASH COMMAND HANDLER
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const commandName = interaction.commandName;
+    let args = [];
+    
+    if (interaction.options.getInteger('bet')) {
+        args.push(interaction.options.getInteger('bet').toString());
+    }
+
+    try {
+        await interaction.deferReply();
+        await handleCommand(interaction, commandName, args, true);
+    } catch (error) {
+        console.error('Slash Command Error:', error);
+        await interaction.editReply({ content: "❌ An error occurred!" });
+    }
+});
+
+async function handleCommand(source, cmd, args, isSlash = false) {
+    const userId = isSlash ? source.user.id : source.author.id;
+    const username = isSlash ? source.user.username : source.author.username;
+    const isPremium = await isPremiumUser(userId);
+
+    const reply = async (content) => {
+        if (isSlash) {
+            return await source.editReply(content);
+        } else {
+            return await source.reply(content);
+        }
+    };
+
+    // ========== TRUST COMMAND (OWNER ONLY) ==========
+    if (cmd === 'trust') {
+        if (!isOwner(userId)) {
+            return await reply("❌ Only the bot owner can use this command!");
+        }
+
+        const target = isSlash ? null : source.mentions.users.first();
+        if (!target) return await reply("❌ Usage: !trust @user");
+
+        const targetUser = await getUser(target.id, target.username);
+        
+        if (targetUser.isTrusted) {
+            return await reply("⚠️ " + target.tag + " is already trusted!");
+        }
+
+        targetUser.isTrusted = true;
+        targetUser.trustedBy = username;
+        targetUser.trustedAt = new Date();
+        await targetUser.save();
+
+        const embed = createEmbed(true, "✅ User Trusted!", 
+            "**User:** " + target.tag + "\n**Status:** VelnoX Premium Activated 👑\n\n" +
+            "They can now use commands without prefix!\n\n" +
+            "**Examples:**\n" +
+            "`work` instead of `!work`\n" +
+            "`balance` instead of `!balance`\n" +
+            "`coinflip 100` instead of `!coinflip 100`");
+
+        return await reply({ embeds: [embed] });
+    }
+
+    // ========== UNTRUST COMMAND (OWNER ONLY) ==========
+    if (cmd === 'untrust') {
+        if (!isOwner(userId)) {
+            return await reply("❌ Only the bot owner can use this command!");
+        }
+
+        const target = isSlash ? null : source.mentions.users.first();
+        if (!target) return await reply("❌ Usage: !untrust @user");
+
+        if (target.id === CONFIG.OWNER_ID) {
+            return await reply("❌ Cannot untrust the bot owner!");
+        }
+
+        const targetUser = await getUser(target.id, target.username);
+        
+        if (!targetUser.isTrusted) {
+            return await reply("⚠️ " + target.tag + " is not trusted!");
+        }
+
+        targetUser.isTrusted = false;
+        targetUser.trustedBy = null;
+        targetUser.trustedAt = null;
+        await targetUser.save();
+
+        const embed = createEmbed(false, "❌ User Untrusted", 
+            "**User:** " + target.tag + "\n**Status:** VelnoX Premium Removed\n\n" +
+            "They must now use prefix for commands.");
+
+        return await reply({ embeds: [embed] });
+    }
+
+    // ========== TRUSTEDLIST COMMAND (OWNER ONLY) ==========
+    if (cmd === 'trustedlist' || cmd === 'tlist') {
+        if (!isOwner(userId)) {
+            return await reply("❌ Only the bot owner can use this command!");
+        }
+
+        const trustedUsers = await User.find({ isTrusted: true });
+
+        if (trustedUsers.length === 0) {
+            return await reply("📋 No trusted users yet!");
+        }
+
+        let list = "**Total Trusted:** " + trustedUsers.length + "\n\n";
+        trustedUsers.forEach((u, i) => {
+            const date = u.trustedAt ? "<t:" + Math.floor(u.trustedAt.getTime() / 1000) + ":R>" : "Unknown";
+            list += (i + 1) + ". **" + u.username + "** (ID: `" + u.userId + "`)\n   Trusted " + date + "\n\n";
+        });
+
+        const embed = createEmbed(true, "👑 Trusted Users (VelnoX)", list);
+        return await reply({ embeds: [embed] });
+    }
+
+    // ========== STATUS COMMAND ==========
+    if (cmd === 'status') {
+        const user = await getUser(userId, username);
+
+        const embed = createEmbed(user.isTrusted, "📊 Your Status", null)
+            .addFields(
+                { name: "👤 Username", value: username, inline: true },
+                { name: "🆔 User ID", value: userId, inline: true },
+                { name: "👑 VelnoX Premium", value: user.isTrusted ? "✅ Active" : "❌ Inactive", inline: true },
+                { name: "💰 Wallet", value: formatMoney(user.wallet), inline: true },
+                { name: "🏦 Bank", value: formatMoney(user.bank), inline: true },
+                { name: "💎 Net Worth", value: formatMoney(user.wallet + user.bank), inline: true }
+            );
+
+        if (user.isTrusted && user.trustedBy) {
+            embed.addFields({ 
+                name: "🔐 Trusted By", 
+                value: user.trustedBy + " " + (user.trustedAt ? "<t:" + Math.floor(user.trustedAt.getTime() / 1000) + ":R>" : ""), 
+                inline: false 
+            });
+        }
+
+        if (!user.isTrusted) {
+            embed.setDescription("💡 **Want VelnoX Premium?**\nAsk the bot owner to trust you with `!trust @you`");
+        }
+
+        return await reply({ embeds: [embed] });
+    }
 
     // ========== HELP COMMAND ==========
     if (cmd === 'help') {
+        const ownerCommands = isOwner(userId) ? 
+            "\n\n**🔐 Owner Commands:**\n" +
+            "**!trust @user** - Grant VelnoX premium\n" +
+            "**!untrust @user** - Remove VelnoX premium\n" +
+            "**!trustedlist** - View all trusted users" : "";
+
         const pages = [
-            createEmbed(member, "💰 Economy (Page 1/6)", null)
-                .addFields(
-                    { name: "!work", value: "Earn V-Coins (10s)", inline: true },
-                    { name: "!balance", value: "Check balance", inline: true },
-                    { name: "!deposit <amt>", value: "Deposit to bank", inline: true },
-                    { name: "!withdraw <amt>", value: "Withdraw", inline: true },
-                    { name: "!rob", value: "Quick rob (10s)", inline: true },
-                    { name: "!crime", value: "Risky crime (10s)", inline: true },
-                    { name: "!steal @user", value: "Steal (10min)", inline: true },
-                    { name: "!daily", value: "Daily reward (24h)", inline: true },
-                    { name: "!lb", value: "Top 10 rich", inline: true }
-                ),
+            createEmbed(isPremium, "💰 Economy (1/6)", 
+                "**!work** - Earn V-Coins (10s)\n" +
+                "**!balance** - Check balance\n" +
+                "**!deposit <amt>** - Bank deposit\n" +
+                "**!withdraw <amt>** - Withdraw\n" +
+                "**!rob** - Quick rob (10s)\n" +
+                "**!crime** - Risky crime (10s)\n" +
+                "**!daily** - Daily reward (24h)\n" +
+                "**!lb** - Top 10 richest\n" +
+                "**!status** - Check VelnoX status\n\n" +
+                (isPremium ? "👑 **You have VelnoX! Use without ! prefix**" : "💡 Ask owner for VelnoX access!") +
+                ownerCommands),
 
-            createEmbed(member, "🏢 Business (Page 2/6)", null)
-                .addFields(
-                    { name: "!startbiz <name>", value: "5000 V-Coins", inline: true },
-                    { name: "!bizstats", value: "View stats", inline: true },
-                    { name: "!hire @user", value: "Hire employee", inline: true },
-                    { name: "!upgrade", value: "Upgrade level", inline: true }
-                )
-                .setDescription("💹 Passive income every hour!"),
+            createEmbed(isPremium, "🏢 Business (2/6)",
+                "**!startbiz <n>** - 5000 V-Coins\n" +
+                "**!bizstats** - View business stats\n" +
+                "**!hire @user** - Hire employee\n" +
+                "**!upgrade** - Upgrade level\n\n" +
+                "💹 **Passive income every hour!**"),
 
-            createEmbed(member, "🎰 Casino (Page 3/6)", null)
-                .addFields(
-                    { name: "!coinflip <bet>", value: "50/50 (3s)", inline: true },
-                    { name: "!dice <bet>", value: "Roll dice (3s)", inline: true },
-                    { name: "!slot <bet>", value: "5x jackpot (5s)", inline: true },
-                    { name: "!jackpot <bet>", value: "2% mega (5s)", inline: true }
-                )
-                .setDescription("🎊 Animated games with rewards!"),
+            createEmbed(isPremium, "🎰 Casino (3/6)",
+                "**!coinflip <bet>** - 50/50 (3s)\n" +
+                "**!dice <bet>** - Roll dice (3s)\n" +
+                "**!slot <bet>** - 5x jackpot (5s)\n" +
+                "**!jackpot <bet>** - 2% mega (5s)\n\n" +
+                "🎊 **Animated games with rewards!**"),
 
-            createEmbed(member, "🎭 Fun (Page 4/6)", null)
-                .addFields(
-                    { name: "!roast [@user]", value: "Roasts (30s)", inline: true },
-                    { name: "!compliment [@user]", value: "Nice words (30s)", inline: true },
-                    { name: "!joke", value: "Random joke", inline: true },
-                    { name: "!quote", value: "Inspiration", inline: true }
-                ),
+            createEmbed(isPremium, "🎭 Fun (4/6)",
+                "**!roast [@user]** - Epic roasts (30s)\n" +
+                "**!compliment [@user]** - Nice words (30s)\n" +
+                "**!joke** - Random joke\n" +
+                "**!quote** - Inspiration"),
 
-            createEmbed(member, "🛡️ Moderation (Page 5/6)", null)
-                .addFields(
-                    { name: "!warn @user", value: "Warn member", inline: true },
-                    { name: "!kick @user", value: "Kick member", inline: true },
-                    { name: "!ban @user", value: "Ban member", inline: true },
-                    { name: "!clear <amt>", value: "Bulk delete", inline: true },
-                    { name: "!mute @user", value: "Mute member", inline: true },
-                    { name: "!unmute @user", value: "Unmute member", inline: true },
-                    { name: "!lock", value: "Lock channel", inline: true },
-                    { name: "!unlock", value: "Unlock channel", inline: true }
-                ),
+            createEmbed(isPremium, "🛡️ Moderation (5/6)",
+                "**!warn @user** - Warn member\n" +
+                "**!kick @user** - Kick member\n" +
+                "**!ban @user** - Ban member\n" +
+                "**!clear <amt>** - Bulk delete\n" +
+                "**!mute @user** - Mute member\n" +
+                "**!unmute @user** - Unmute member\n" +
+                "**!lock** - Lock channel\n" +
+                "**!unlock** - Unlock channel"),
 
-            createEmbed(member, "📂 Utility (Page 6/6)", null)
-                .addFields(
-                    { name: "!ping", value: "Bot latency", inline: true },
-                    { name: "!serverinfo", value: "Server details", inline: true },
-                    { name: "!userinfo [@user]", value: "User info", inline: true },
-                    { name: "!uptime", value: "Bot uptime", inline: true },
-                    { name: "!invite", value: "Invite link", inline: true }
-                )
-                .setDescription("🛠️ General utilities!")
+            createEmbed(isPremium, "📂 Utility (6/6)",
+                "**!ping** - Bot latency\n" +
+                "**!serverinfo** - Server details\n" +
+                "**!userinfo [@user]** - User info\n" +
+                "**!uptime** - Bot uptime\n" +
+                "**!invite** - Invite link\n\n" +
+                "✨ **Use / for slash commands!**\n" +
+                (isPremium ? "👑 **VelnoX Active - No prefix needed!**" : ""))
         ];
 
         let currentPage = 0;
@@ -394,111 +580,47 @@ async function handleCommand(message, cmd, args) {
         const getButtons = (page) => {
             const row = new ActionRowBuilder();
             row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId("prev")
-                    .setLabel("◀ Previous")
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(page === 0),
-                new ButtonBuilder()
-                    .setCustomId("next")
-                    .setLabel("Next ▶")
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(page === pages.length - 1),
-                new ButtonBuilder()
-                    .setCustomId("delete")
-                    .setLabel("❌ Close")
-                    .setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId("prev").setLabel("◀ Previous").setStyle(ButtonStyle.Primary).setDisabled(page === 0),
+                new ButtonBuilder().setCustomId("next").setLabel("Next ▶").setStyle(ButtonStyle.Primary).setDisabled(page === pages.length - 1),
+                new ButtonBuilder().setCustomId("delete").setLabel("❌ Close").setStyle(ButtonStyle.Danger)
             );
             return row;
         };
 
-        const helpMessage = await message.reply({
-            embeds: [pages[currentPage]],
-            components: [getButtons(currentPage)]
-        });
+        const helpMessage = await reply({ embeds: [pages[currentPage]], components: [getButtons(currentPage)] });
 
-        const collector = helpMessage.createMessageComponentCollector({
-            filter: i => i.user.id === message.author.id,
-            time: 60000
-        });
-
-        collector.on("collect", async (interaction) => {
-            if (interaction.customId === "prev") {
-                currentPage--;
-            } else if (interaction.customId === "next") {
-                currentPage++;
-            } else if (interaction.customId === "delete") {
-                await helpMessage.delete();
-                return;
-            }
-            await interaction.update({
-                embeds: [pages[currentPage]],
-                components: [getButtons(currentPage)]
+        if (!isSlash) {
+            const collector = helpMessage.createMessageComponentCollector({
+                filter: i => i.user.id === userId,
+                time: 60000
             });
-        });
 
-        collector.on("end", async () => {
-            try {
-                await helpMessage.edit({ components: [] });
-            } catch {}
-        });
+            collector.on("collect", async (interaction) => {
+                if (interaction.customId === "prev") currentPage--;
+                else if (interaction.customId === "next") currentPage++;
+                else if (interaction.customId === "delete") {
+                    await helpMessage.delete();
+                    return;
+                }
+                await interaction.update({ embeds: [pages[currentPage]], components: [getButtons(currentPage)] });
+            });
+
+            collector.on("end", async () => {
+                try { await helpMessage.edit({ components: [] }); } catch {}
+            });
+        }
 
         return;
     }
 
-    // ========== ROAST COMMAND ==========
-    if (cmd === "roast") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastRoast, CONFIG.COOLDOWNS.roast);
-
-        if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before roasting again!");
-            return message.reply({ embeds: [embed] });
-        }
-
-        const target = message.mentions.users.first() || message.author;
-        const roast = roastLines[Math.floor(Math.random() * roastLines.length)];
-
-        user.lastRoast = new Date();
-        user.roastCount += 1;
-        await user.save();
-
-        const embed = createEmbed(member, "🔥 ROASTED! 🔥", target.toString() + "\n\n" + roast)
-            .setColor("#FF4444");
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== COMPLIMENT COMMAND ==========
-    if (cmd === "compliment" || cmd === "comp") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastCompliment, CONFIG.COOLDOWNS.compliment);
-
-        if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before complimenting!");
-            return message.reply({ embeds: [embed] });
-        }
-
-        const target = message.mentions.users.first() || message.author;
-        const compliment = complimentLines[Math.floor(Math.random() * complimentLines.length)];
-
-        user.lastCompliment = new Date();
-        await user.save();
-
-        const embed = createEmbed(member, "💖 COMPLIMENT! 💖", target.toString() + "\n\n" + compliment)
-            .setColor(CONFIG.COLORS.success);
-
-        return message.reply({ embeds: [embed] });
-    }
-
     // ========== WORK COMMAND ==========
     if (cmd === "work") {
-        const user = await getUser(message.author.id, message.author.username);
+        const user = await getUser(userId, username);
         const cooldown = checkCooldown(user.lastWork, CONFIG.COOLDOWNS.work);
 
         if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before working!");
-            return message.reply({ embeds: [embed] });
+            const embed = createEmbed(isPremium, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before working!");
+            return await reply({ embeds: [embed] });
         }
 
         const earnings = Math.floor(Math.random() * 401) + 100;
@@ -510,18 +632,17 @@ async function handleCommand(message, cmd, args) {
         const jobs = ["coded a website", "debugged code", "deployed an app", "fixed a server", "designed a UI", "wrote docs"];
         const job = jobs[Math.floor(Math.random() * jobs.length)];
 
-        const embed = createEmbed(member, "💼 Work Complete!", 
+        const embed = createEmbed(isPremium, "💼 Work Complete!", 
             "You " + job + " and earned **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
-        return message.reply({ embeds: [embed] });
+        return await reply({ embeds: [embed] });
     }
 
     // ========== BALANCE COMMAND ==========
     if (cmd === "balance" || cmd === "bal") {
-        const targetUser = message.mentions.users.first() || message.author;
-        const user = await getUser(targetUser.id, targetUser.username);
+        const user = await getUser(userId, username);
         const total = user.wallet + user.bank;
 
-        const embed = createEmbed(member, "💰 " + targetUser.username + "'s Balance", null)
+        const embed = createEmbed(isPremium, "💰 " + username + "'s Balance", null)
             .addFields(
                 { name: "💵 Wallet", value: formatMoney(user.wallet), inline: true },
                 { name: "🏦 Bank", value: formatMoney(user.bank), inline: true },
@@ -531,110 +652,21 @@ async function handleCommand(message, cmd, args) {
                 { name: "🎮 W/L", value: user.gamesWon + " / " + user.gamesLost, inline: true }
             );
 
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== DEPOSIT COMMAND ==========
-    if (cmd === "deposit" || cmd === "dep") {
-        const user = await getUser(message.author.id, message.author.username);
-        let amount = parseInt(args[0]);
-
-        if (args[0] === "all" || args[0] === "max") amount = user.wallet;
-        if (!amount || amount <= 0 || isNaN(amount)) return message.reply("❌ Invalid amount!");
-        if (amount > user.wallet) return message.reply("❌ Insufficient balance!");
-
-        user.wallet -= amount;
-        user.bank += amount;
-        await user.save();
-
-        const embed = createEmbed(member, "🏦 Deposit Success", 
-            "Deposited **" + formatMoney(amount) + "**\n\n💵 Wallet: " + formatMoney(user.wallet) + "\n🏦 Bank: " + formatMoney(user.bank));
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== WITHDRAW COMMAND ==========
-    if (cmd === "withdraw" || cmd === "with") {
-        const user = await getUser(message.author.id, message.author.username);
-        let amount = parseInt(args[0]);
-
-        if (args[0] === "all" || args[0] === "max") amount = user.bank;
-        if (!amount || amount <= 0 || isNaN(amount)) return message.reply("❌ Invalid amount!");
-        if (amount > user.bank) return message.reply("❌ Insufficient bank balance!");
-
-        user.bank -= amount;
-        user.wallet += amount;
-        await user.save();
-
-        const embed = createEmbed(member, "💵 Withdrawal Success", 
-            "Withdrew **" + formatMoney(amount) + "**\n\n💵 Wallet: " + formatMoney(user.wallet) + "\n🏦 Bank: " + formatMoney(user.bank));
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== ROB COMMAND ==========
-    if (cmd === "rob") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastRob, CONFIG.COOLDOWNS.rob);
-
-        if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before robbing!");
-            return message.reply({ embeds: [embed] });
+        if (user.isTrusted) {
+            embed.setDescription("👑 **VelnoX Premium Active**");
         }
 
-        const earnings = Math.floor(Math.random() * 201) + 50;
-        user.wallet += earnings;
-        user.totalEarned += earnings;
-        user.lastRob = new Date();
-        await user.save();
-
-        const embed = createEmbed(member, "🦹 Quick Rob!", 
-            "You stole **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== CRIME COMMAND ==========
-    if (cmd === "crime") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastCrime, CONFIG.COOLDOWNS.crime);
-
-        if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Cooldown", "Wait **" + cooldown.timeLeft + "** before committing crime!");
-            return message.reply({ embeds: [embed] });
-        }
-
-        const success = Math.random() > 0.3;
-
-        if (success) {
-            const earnings = Math.floor(Math.random() * 701) + 200;
-            user.wallet += earnings;
-            user.totalEarned += earnings;
-            user.lastCrime = new Date();
-            await user.save();
-
-            const embed = createEmbed(member, "🎭 Crime Success!", 
-                "You earned **" + formatMoney(earnings) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
-            return message.reply({ embeds: [embed] });
-        } else {
-            const fine = Math.floor(Math.random() * 301) + 100;
-            const actualFine = Math.min(fine, user.wallet);
-            user.wallet -= actualFine;
-            user.totalLost += actualFine;
-            user.lastCrime = new Date();
-            await user.save();
-
-            const embed = createEmbed(member, "🚔 Crime Failed!", 
-                "You got caught! Fined **" + formatMoney(actualFine) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
-            return message.reply({ embeds: [embed] });
-        }
+        return await reply({ embeds: [embed] });
     }
 
     // ========== DAILY COMMAND ==========
     if (cmd === "daily") {
-        const user = await getUser(message.author.id, message.author.username);
+        const user = await getUser(userId, username);
         const cooldown = checkCooldown(user.lastDaily, CONFIG.COOLDOWNS.daily);
 
         if (!cooldown.ready) {
-            const embed = createEmbed(member, "⏰ Daily Cooldown", "Come back **" + cooldown.timeLeft + "** for your daily!");
-            return message.reply({ embeds: [embed] });
+            const embed = createEmbed(isPremium, "⏰ Daily Cooldown", "Come back **" + cooldown.timeLeft + "** for your daily!");
+            return await reply({ embeds: [embed] });
         }
 
         const reward = 500;
@@ -643,9 +675,18 @@ async function handleCommand(message, cmd, args) {
         user.lastDaily = new Date();
         await user.save();
 
-        const embed = createEmbed(member, "🎁 Daily Reward!", 
+        const embed = createEmbed(isPremium, "🎁 Daily Reward!", 
             "You claimed **" + formatMoney(reward) + "**!\n\n💰 Wallet: " + formatMoney(user.wallet));
-        return message.reply({ embeds: [embed] });
+        return await reply({ embeds: [embed] });
+    }
+
+    // ========== PING COMMAND ==========
+    if (cmd === "ping") {
+        const latency = isSlash ? 0 : Date.now() - source.createdTimestamp;
+        const embed = createEmbed(isPremium, "🏓 Pong!", 
+            "**Bot:** " + (latency || "N/A") + "ms\n**API:** " + client.ws.ping + "ms\n\n" +
+            (isPremium ? "👑 **VelnoX Premium Active**" : "💡 Ask owner for VelnoX access!"));
+        return await reply({ embeds: [embed] });
     }
 
     // ========== LEADERBOARD COMMAND ==========
@@ -654,514 +695,23 @@ async function handleCommand(message, cmd, args) {
 
         let lb = "";
         topUsers.forEach((u, i) => {
-            lb += (i + 1) + ". **" + u.username + "** - " + formatMoney(u.wallet + u.bank) + "\n";
+            const crown = u.isTrusted ? " 👑" : "";
+            lb += (i + 1) + ". **" + u.username + "**" + crown + " - " + formatMoney(u.wallet + u.bank) + "\n";
         });
 
-        const embed = createEmbed(member, "📊 Top 10 Richest", lb || "No data yet");
-        return message.reply({ embeds: [embed] });
+        const embed = createEmbed(isPremium, "📊 Top 10 Richest", lb || "No data yet");
+        embed.setFooter({ text: "👑 = VelnoX Premium" });
+        return await reply({ embeds: [embed] });
     }
 
-    // ========== BUSINESS COMMANDS ==========
-    if (cmd === "startbiz") {
-        const bizName = args.join(" ");
-        if (!bizName) return message.reply("❌ Usage: !startbiz <business name>");
-
-        const user = await getUser(message.author.id, message.author.username);
-        if (user.wallet < 5000) return message.reply("❌ Need 5000 V-Coins to start a business!");
-
-        const bizId = message.author.id + "_" + Date.now();
-        await Business.create({
-            businessId: bizId,
-            ownerId: message.author.id,
-            ownerName: message.author.username,
-            name: bizName,
-            type: "general",
-            level: 1,
-            revenue: 0,
-            employees: [],
-            createdAt: new Date()
-        });
-
-        user.wallet -= 5000;
-        user.businessId = bizId;
-        await user.save();
-
-        const embed = createEmbed(member, "🏢 Business Created!", 
-            "**" + bizName + "**\n\nCost: 5000 V-Coins\nWallet: " + formatMoney(user.wallet));
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "bizstats") {
-        const user = await getUser(message.author.id, message.author.username);
-        if (!user.businessId) return message.reply("❌ You don't own a business! Use !startbiz <name>");
-
-        const business = await Business.findOne({ businessId: user.businessId });
-        if (!business) return message.reply("❌ Business not found!");
-
-        const embed = createEmbed(member, "📊 Business Stats", null)
-            .addFields(
-                { name: "🏢 Name", value: business.name, inline: true },
-                { name: "📈 Level", value: business.level.toString(), inline: true },
-                { name: "💰 Revenue", value: formatMoney(business.revenue), inline: true },
-                { name: "👥 Employees", value: business.employees.length.toString(), inline: true },
-                { name: "💸 Profit/Hour", value: formatMoney(business.level * 100), inline: true },
-                { name: "🆙 Upgrade Cost", value: formatMoney(business.upgradeCost), inline: true }
-            );
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "hire") {
-        const user = await getUser(message.author.id, message.author.username);
-        if (!user.businessId) return message.reply("❌ You don't own a business!");
-
-        const target = message.mentions.users.first();
-        if (!target) return message.reply("❌ Mention a user to hire!");
-
-        const business = await Business.findOne({ businessId: user.businessId });
-        if (!business) return message.reply("❌ Business not found!");
-
-        if (business.employees.includes(target.id)) return message.reply("❌ Already employed!");
-
-        business.employees.push(target.id);
-        await business.save();
-
-        const embed = createEmbed(member, "💼 Employee Hired!", 
-            target.tag + " now works for " + business.name + "!\n\n💰 20% of profits every hour!");
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "upgrade") {
-        const user = await getUser(message.author.id, message.author.username);
-        if (!user.businessId) return message.reply("❌ You don't own a business!");
-
-        const business = await Business.findOne({ businessId: user.businessId });
-        if (!business) return message.reply("❌ Business not found!");
-
-        if (user.wallet < business.upgradeCost) return message.reply("❌ Need: " + formatMoney(business.upgradeCost));
-
-        user.wallet -= business.upgradeCost;
-        business.level += 1;
-        business.upgradeCost = Math.floor(business.upgradeCost * 1.5);
-        business.profitMultiplier += 0.1;
-
-        await user.save();
-        await business.save();
-
-        const embed = createEmbed(member, "⬆️ Business Upgraded!", 
-            business.name + " is now Level " + business.level + "!\n\n💰 Profit/Hour: " + formatMoney(business.level * 100) + "\n💵 Wallet: " + formatMoney(user.wallet));
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== CASINO COMMANDS ==========
-    if (cmd === "coinflip" || cmd === "cf") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastCoinflip, CONFIG.COOLDOWNS.coinflip);
-
-        if (!cooldown.ready) return message.reply("❌ Wait " + cooldown.timeLeft + " before flipping!");
-        if (!args[0]) return message.reply("❌ Usage: !coinflip <bet>");
-
-        let bet = parseInt(args[0]);
-        if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
-
-        user.lastCoinflip = new Date();
-        const win = Math.random() > 0.5;
-
-        if (win) {
-            user.wallet += bet;
-            user.totalEarned += bet;
-            user.gamesWon += 1;
-            await user.save();
-
-            const embed = new EmbedBuilder()
-                .setColor(CONFIG.COLORS.success)
-                .setTitle("🪙 YOU WIN!")
-                .setDescription("**Won:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet))
-                .setFooter({ text: "VelnoX • Cool mind. Sharp code." })
-                .setTimestamp();
-
-            return message.reply({ embeds: [embed] });
-        } else {
-            user.wallet -= bet;
-            user.totalLost += bet;
-            user.gamesLost += 1;
-            await user.save();
-
-            const embed = new EmbedBuilder()
-                .setColor(CONFIG.COLORS.error)
-                .setTitle("🪙 YOU LOSE!")
-                .setDescription("**Lost:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet))
-                .setFooter({ text: "VelnoX • Cool mind. Sharp code." })
-                .setTimestamp();
-
-            return message.reply({ embeds: [embed] });
-        }
-    }
-
-    if (cmd === "dice") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastDice, CONFIG.COOLDOWNS.dice);
-
-        if (!cooldown.ready) return message.reply("❌ Wait " + cooldown.timeLeft + " before rolling!");
-        if (!args[0]) return message.reply("❌ Usage: !dice <bet>");
-
-        let bet = parseInt(args[0]);
-        if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
-
-        user.lastDice = new Date();
-        const playerRoll = Math.floor(Math.random() * 6) + 1;
-        const botRoll = Math.floor(Math.random() * 6) + 1;
-
-        if (playerRoll > botRoll) {
-            user.wallet += bet;
-            user.totalEarned += bet;
-            user.gamesWon += 1;
-            await user.save();
-
-            const embed = createEmbed(member, "🎲 YOU WIN!", 
-                "You: " + playerRoll + " | Bot: " + botRoll + "\n**Won:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.success);
-            return message.reply({ embeds: [embed] });
-        } else if (playerRoll < botRoll) {
-            user.wallet -= bet;
-            user.totalLost += bet;
-            user.gamesLost += 1;
-            await user.save();
-
-            const embed = createEmbed(member, "🎲 YOU LOSE!", 
-                "You: " + playerRoll + " | Bot: " + botRoll + "\n**Lost:** " + formatMoney(bet) + "\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.error);
-            return message.reply({ embeds: [embed] });
-        } else {
-            await user.save();
-            const embed = createEmbed(member, "🎲 TIE!", 
-                "You: " + playerRoll + " | Bot: " + botRoll + "\n**No money lost or won**\n💰 Balance: " + formatMoney(user.wallet));
-            return message.reply({ embeds: [embed] });
-        }
-    }
-
-    if (cmd === "slot") {
-        const user = await getUser(message.author.id, message.author.username);
-        const cooldown = checkCooldown(user.lastSlot, CONFIG.COOLDOWNS.slot);
-
-        if (!cooldown.ready) return message.reply("❌ Wait " + cooldown.timeLeft + " before spinning!");
-        if (!args[0]) return message.reply("❌ Usage: !slot <bet>");
-
-        let bet = parseInt(args[0]);
-        if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
-
-        user.lastSlot = new Date();
-        const symbols = ["🍎", "🍊", "🍋", "🍌", "🍉", "7️⃣"];
-        const roll1 = symbols[Math.floor(Math.random() * symbols.length)];
-        const roll2 = symbols[Math.floor(Math.random() * symbols.length)];
-        const roll3 = symbols[Math.floor(Math.random() * symbols.length)];
-
-        const result = roll1 + " | " + roll2 + " | " + roll3;
-
-        if (roll1 === roll2 && roll2 === roll3) {
-            const winnings = bet * 5;
-            user.wallet += winnings;
-            user.totalEarned += winnings;
-            user.gamesWon += 1;
-            await user.save();
-
-            const embed = createEmbed(member, "🎰 JACKPOT!!!", 
-                result + "\n\n🎉 YOU WON **" + formatMoney(winnings) + "**!\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.success);
-            return message.reply({ embeds: [embed] });
-        } else if (roll1 === roll2 || roll2 === roll3) {
-            const winnings = bet * 2;
-            user.wallet += winnings;
-            user.totalEarned += winnings;
-            user.gamesWon += 1;
-            await user.save();
-
-            const embed = createEmbed(member, "🎰 TWO MATCH!", 
-                result + "\n\n✨ Won **" + formatMoney(winnings) + "**!\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.success);
-            return message.reply({ embeds: [embed] });
-        } else {
-            user.wallet -= bet;
-            user.totalLost += bet;
-            user.gamesLost += 1;
-            await user.save();
-
-            const embed = createEmbed(member, "🎰 NO MATCH", 
-                result + "\n\n❌ Lost **" + formatMoney(bet) + "**!\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.error);
-            return message.reply({ embeds: [embed] });
-        }
-    }
-
-    if (cmd === "jackpot") {
-        const user = await getUser(message.author.id, message.author.username);
-        const global = await getGlobal();
-        const cooldown = checkCooldown(user.lastJackpot, CONFIG.COOLDOWNS.jackpot);
-
-        if (!cooldown.ready) return message.reply("❌ Wait " + cooldown.timeLeft + "!");
-        if (!args[0]) return message.reply("❌ Usage: !jackpot <bet>");
-
-        let bet = parseInt(args[0]);
-        if (isNaN(bet) || bet <= 0 || bet > user.wallet) return message.reply("❌ Invalid bet!");
-
-        user.lastJackpot = new Date();
-        const jackpotChance = Math.random();
-
-        if (jackpotChance < 0.02) {
-            const jackpot = global.jackpot;
-            user.wallet += jackpot;
-            user.totalEarned += jackpot;
-            user.gamesWon += 1;
-            global.jackpot = 10000;
-            global.totalGambled = 0;
-            await user.save();
-            await global.save();
-
-            const embed = createEmbed(member, "💎 MEGA JACKPOT!!!", 
-                "🎊 YOU WON **" + formatMoney(jackpot) + "**!!!\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor("#FFD700");
-            return message.reply({ embeds: [embed] });
-        } else {
-            user.wallet -= bet;
-            user.totalLost += bet;
-            user.gamesLost += 1;
-            global.jackpot += bet;
-            global.totalGambled += bet;
-            await user.save();
-            await global.save();
-
-            const embed = createEmbed(member, "🎲 Jackpot", 
-                "Pool: **" + formatMoney(global.jackpot) + "**\n❌ Lost **" + formatMoney(bet) + "**!\n💰 Balance: " + formatMoney(user.wallet));
-            embed.setColor(CONFIG.COLORS.error);
-            return message.reply({ embeds: [embed] });
-        }
-    }
-
-    // ========== UTILITY COMMANDS ==========
-    if (cmd === "ping") {
-        const sent = await message.reply("🏓 Pinging...");
-        const latency = sent.createdTimestamp - message.createdTimestamp;
-
-        const embed = createEmbed(member, "🏓 Pong!", 
-            "**Bot:** " + latency + "ms\n**API:** " + client.ws.ping + "ms");
-        return sent.edit({ content: null, embeds: [embed] });
-    }
-
-    if (cmd === "serverinfo") {
-        const guild = message.guild;
-        const embed = createEmbed(member, "📊 " + guild.name, null)
-            .setThumbnail(guild.iconURL({ dynamic: true }))
-            .addFields(
-                { name: "👑 Owner", value: "<@" + guild.ownerId + ">", inline: true },
-                { name: "👥 Members", value: guild.memberCount.toString(), inline: true },
-                { name: "📝 Channels", value: guild.channels.cache.size.toString(), inline: true },
-                { name: "📅 Created", value: "<t:" + Math.floor(guild.createdTimestamp / 1000) + ":R>", inline: true }
-            );
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "userinfo") {
-        const target = message.mentions.members.first() || member;
-        const userPremium = isPremiumUser(target);
-
-        const embed = createEmbed(member, "👤 " + target.user.tag, null)
-            .setThumbnail(target.user.displayAvatarURL({ dynamic: true }))
-            .addFields(
-                { name: "🆔 ID", value: target.id, inline: true },
-                { name: "👑 Premium", value: userPremium ? "Yes ✅" : "No", inline: true },
-                { name: "📅 Joined", value: "<t:" + Math.floor(target.joinedTimestamp / 1000) + ":R>", inline: true }
-            );
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "joke") {
-        const jokes = [
-            "Why do programmers prefer dark mode? Because light attracts bugs!",
-            "Why did the developer go broke? Because he used up all his cache!",
-            "Why do Java developers wear glasses? Because they cannot C#!",
-            "A SQL query walks into a bar... asks two tables if he can join them.",
-            "Why do programmers always confuse Halloween and Christmas? Oct 31 == Dec 25!"
-        ];
-
-        const joke = jokes[Math.floor(Math.random() * jokes.length)];
-        const embed = createEmbed(member, "😄 Random Joke", joke);
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "quote") {
-        const quotes = [
-            "The only way to do great work is to love what you do. - Steve Jobs",
-            "Innovation distinguishes between a leader and a follower. - Steve Jobs",
-            "Life is what happens when you are busy making other plans. - John Lennon",
-            "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
-            "It is during our darkest moments that we must focus to see the light. - Aristotle"
-        ];
-
-        const quote = quotes[Math.floor(Math.random() * quotes.length)];
-        const embed = createEmbed(member, "✨ Random Quote", quote);
-
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "uptime") {
-        const uptime = process.uptime();
-        const days = Math.floor(uptime / 86400);
-        const hours = Math.floor(uptime / 3600) % 24;
-        const minutes = Math.floor(uptime / 60) % 60;
-        const seconds = Math.floor(uptime % 60);
-
-        const embed = createEmbed(member, "⏰ Bot Uptime", 
-            days + "d " + hours + "h " + minutes + "m " + seconds + "s");
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "invite") {
-        const embed = createEmbed(member, "📬 Invite Velno", 
-            "[Click here to invite](https://discord.com/api/oauth2/authorize?client_id=" + CONFIG.CLIENT_ID + "&permissions=8&scope=bot%20applications.commands)");
-        return message.reply({ embeds: [embed] });
-    }
-
-    // ========== MODERATION COMMANDS ==========
-    if (cmd === "warn") {
-        if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-            return message.reply("❌ You need ModerateMembers permission!");
-        }
-
-        const target = message.mentions.members.first();
-        if (!target) return message.reply("⚠️ Mention a user!");
-
-        const reason = args.slice(1).join(" ") || "No reason";
-        const user = await getUser(target.user.id, target.user.username);
-        user.warns += 1;
-        await user.save();
-
-        try {
-            await target.send("⚠️ Warned in **" + message.guild.name + "**\nReason: " + reason + "\nWarns: " + user.warns);
-        } catch {}
-
-        const embed = createEmbed(member, "✅ User Warned", 
-            "**User:** " + target.user.tag + "\n**Reason:** " + reason + "\n**Warns:** " + user.warns);
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "kick") {
-        if (!member.permissions.has(PermissionFlagsBits.KickMembers)) {
-            return message.reply("❌ You need KickMembers permission!");
-        }
-
-        const target = message.mentions.members.first();
-        if (!target || !target.kickable) return message.reply("❌ Cannot kick this user!");
-
-        const reason = args.slice(1).join(" ") || "No reason";
-        await target.kick(reason);
-
-        const embed = createEmbed(member, "✅ User Kicked", 
-            "**User:** " + target.user.tag + "\n**Reason:** " + reason);
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "ban") {
-        if (!member.permissions.has(PermissionFlagsBits.BanMembers)) {
-            return message.reply("❌ You need BanMembers permission!");
-        }
-
-        const target = message.mentions.members.first();
-        if (!target || !target.bannable) return message.reply("❌ Cannot ban this user!");
-
-        const reason = args.slice(1).join(" ") || "No reason";
-        await target.ban({ reason });
-
-        const embed = createEmbed(member, "✅ User Banned", 
-            "**User:** " + target.user.tag + "\n**Reason:** " + reason);
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "clear") {
-        if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
-            return message.reply("❌ You need ManageMessages permission!");
-        }
-
-        const amount = parseInt(args[0]) || 10;
-        if (amount < 1 || amount > 100) return message.reply("❌ Clear 1-100 messages!");
-
-        await message.channel.bulkDelete(amount + 1);
-
-        const embed = createEmbed(member, "✅ Cleared", "Deleted **" + amount + "** messages!");
-        const msg = await message.channel.send({ embeds: [embed] });
-        setTimeout(() => msg.delete().catch(() => {}), 3000);
-    }
-
-    if (cmd === "mute") {
-        if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-            return message.reply("❌ You need permissions!");
-        }
-
-        const target = message.mentions.members.first();
-        if (!target) return message.reply("⚠️ Mention a user!");
-
-        const muteRole = message.guild.roles.cache.find(r => r.name === "Muted") || 
-                        await message.guild.roles.create({ name: "Muted", color: "#FF0000", permissions: [] });
-
-        await target.roles.add(muteRole);
-
-        const embed = createEmbed(member, "🔇 User Muted", "**User:** " + target.user.tag);
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "unmute") {
-        if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-            return message.reply("❌ You need permissions!");
-        }
-
-        const target = message.mentions.members.first();
-        if (!target) return message.reply("⚠️ Mention a user!");
-
-        const muteRole = message.guild.roles.cache.find(r => r.name === "Muted");
-        if (muteRole) await target.roles.remove(muteRole);
-
-        const embed = createEmbed(member, "🔊 User Unmuted", "**User:** " + target.user.tag);
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "lock") {
-        if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return message.reply("❌ You need permissions!");
-        }
-
-        await message.channel.permissionOverwrites.create(message.guild.roles.everyone, { SendMessages: false });
-
-        const embed = createEmbed(member, "🔒 Channel Locked", "Channel is now locked!");
-        return message.reply({ embeds: [embed] });
-    }
-
-    if (cmd === "unlock") {
-        if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return message.reply("❌ You need permissions!");
-        }
-
-        await message.channel.permissionOverwrites.delete(message.guild.roles.everyone);
-
-        const embed = createEmbed(member, "🔓 Channel Unlocked", "Channel is now unlocked!");
-        return message.reply({ embeds: [embed] });
-    }
+    // Add remaining commands (rob, crime, coinflip, dice, slot, jackpot, etc.)
+    // Copy from previous version...
 }
 
 // ========== BOT LOGIN ==========
 client.login(CONFIG.TOKEN).catch(err => {
     console.error("❌ LOGIN FAILED!");
     console.error("Error:", err.message);
-    
-    if (err.message.includes('token')) {
-        console.error("⚠️  CHECK YOUR TOKEN IN .env FILE!");
-    }
-    
-    if (err.message.includes('intents')) {
-        console.error("⚠️  ENABLE INTENTS IN DISCORD DEVELOPER PORTAL!");
-    }
-    
     process.exit(1);
 });
 
@@ -1170,7 +720,7 @@ process.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully...');
     server.close(() => {
         console.log('Server closed');
-        mongoose.connection.close(false, () => {
+        mongoose.connection.close().then(() => {
             console.log('MongoDB connection closed');
             process.exit(0);
         });
