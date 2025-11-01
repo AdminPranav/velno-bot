@@ -671,7 +671,7 @@ async function handleCommand(message, cmd, args) {
 
     if (cmd === 'bizstats') {
         const user = await getUser(message.author.id, message.author.username);
-        if (!user.businessId) return message.reply('❌ You don\\'t own a business! Use !startbiz <name>');
+       if (!user.businessId) return message.reply('❌ You don\'t own a business! Use !startbiz <name>');
 
         const business = await Business.findOne({ businessId: user.businessId });
         if (!business) return message.reply('❌ Business not found!');
@@ -1108,3 +1108,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('❌ LOGIN FAILED!');
     console.error(err);
 });
+
