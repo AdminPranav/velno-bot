@@ -1005,13 +1005,20 @@ async function handleCommand(message, cmd, args) {
         return message.reply({ embeds: [embed] });
     }
 
-    if (cmd === 'joke') {
+        if (cmd === 'joke') {
         const jokes = [
-            'Why do programmers prefer dark mode? Because light attracts bugs!',
-            'Why did the developer go broke? Because he used up all his cache!',
-            'Why do Java developers wear glasses? Because they cannot C#!',
-            'A SQL query walks into a bar... asks two tables if he can join them.',
-            'Why do programmers always confuse Halloween and Christmas? Oct 31 == Dec 25!'
+            "Why do programmers prefer dark mode? Because light attracts bugs!",
+            "Why did the developer go broke? Because he used up all his cache!",
+            "Why do Java developers wear glasses? Because they can't C#!",
+            "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
+            "Why do programmers always mix up Halloween and Christmas? Because Oct 31 == Dec 25!",
+            "why do Dil Toote aashiqe never use arrays? Because they prefer to stay single!" ,
+            "Why did the private classes break up? Because they never saw each other.",
+            "Ek aurat beauty parlor mein: 'Mujhe Katrina jaisa bana do!' Parlour wali: 'Sorry ma'am, hum sirf makeup karte hain, plastic surgery nahi!'",
+            "Customer: 'Bhaiya, yeh dahi kitne ka?' Dukandar: '50 rupees kilo.' Customer: 'Itna mehnga? Kal toh 40 tha!' Dukandar: 'Haan, par kal cow ne discount diya tha!'",
+            "Ek banda interview mein: HR: 'Aapki weakness kya hai?' Banda: 'Main jhooth nahi bol sakta.' HR: 'Yeh toh strength hai!' Banda: 'Haan, yeh bhi jhooth tha!'",
+            "Ek banda ATM pe: 'Bhai, balance check karna hai!' Machine: 'Insufficient balance!' Banda: 'Arre, check toh karne de!'",
+            "GF: 'Tum mere liye kya kar sakte ho?' BF: 'Kuch bhi!' GF: 'Sach?' BF: 'Haan!' GF: 'Toh apna phone 1 ghanta ke liye de do!' BF: 'Kuch bhi matlab... kuch bhi nahi!'",
         ];
 
         const joke = jokes[Math.floor(Math.random() * jokes.length)];
@@ -1186,3 +1193,4 @@ client.login(CONFIG.TOKEN).catch(err => {
     console.error('❌ LOGIN FAILED!');
     console.error(err);
 });
+
