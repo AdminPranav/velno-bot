@@ -3,787 +3,960 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velno & VelnoX | 45+ Commands Discord Bot</title>
-    <meta name="description" content="Ultimate Discord bot with economy, casino, moderation, and premium features">
+    <title>Velno — World Domination</title>
     <style>
+        :root {
+            --void: #050505;
+            --director-gold: #FFD700;
+            --gold-glow: rgba(255, 215, 0, 0.4);
+            --velnox-silver: #E0E0E0;
+            --card-bg: rgba(20, 20, 20, 0.6);
+            --text-main: #FFFFFF;
+            --text-dim: #AAAAAA;
+            --terminal-bg: #0F0F0F;
+            --accent-gradient: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+            scroll-behavior: smooth;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0a0a0f;
-            color: #ffffff;
+            background-color: var(--void);
+            color: var(--text-main);
             overflow-x: hidden;
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(255, 215, 0, 0.03) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 215, 0, 0.03) 0%, transparent 25%);
         }
 
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0a0a0f 100%);
-            z-index: -1;
-        }
-
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: -1;
-        }
-
-        .particle {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: rgba(88, 101, 242, 0.5);
-            border-radius: 50%;
-            animation: float 10s infinite;
-        }
-
+        /* --- Animations --- */
         @keyframes float {
-            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
-            50% { opacity: 1; }
-            100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
 
-        header {
-            padding: 20px 50px;
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes glowPulse {
+            0% { box-shadow: 0 0 15px var(--gold-glow); }
+            50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
+            100% { box-shadow: 0 0 15px var(--gold-glow); }
+        }
+
+        /* Utility Class for Scroll Animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Navigation --- */
+        nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(10, 10, 15, 0.8);
-            backdrop-filter: blur(10px);
-            position: sticky;
+            padding: 20px 50px;
+            background: rgba(5, 5, 5, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            position: fixed;
+            width: 100%;
             top: 0;
-            z-index: 100;
-            border-bottom: 2px solid rgba(88, 101, 242, 0.3);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
         }
 
         .logo {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #5865F2, #00D9FF);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--director-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1001;
         }
 
-        nav a {
-            color: #fff;
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-main);
             text-decoration: none;
-            margin-left: 30px;
             font-weight: 500;
-            transition: all 0.3s;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+            position: relative;
         }
 
-        nav a:hover {
-            color: #00D9FF;
-            text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--director-gold);
+            transition: width 0.3s;
         }
 
+        .nav-links a:hover {
+            color: var(--director-gold);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .bar {
+            display: block;
+            width: 25px;
+            height: 3px;
+            margin: 5px auto;
+            transition: all 0.3s ease-in-out;
+            background-color: var(--text-main);
+        }
+
+        /* --- Hero Section --- */
         .hero {
-            height: 90vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding: 0 20px;
+            padding: 160px 20px 80px; 
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative background glow behind hero */
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
         .hero h1 {
-            font-size: 72px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #5865F2, #00D9FF);
+            font-size: 5rem;
+            margin-bottom: 25px;
+            background: linear-gradient(to right bottom, #fff, #bbb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-            animation: glow 2s infinite alternate;
+            line-height: 1.1;
+            font-weight: 900;
+            letter-spacing: -2px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .hero h1 span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        @keyframes glow {
-            from { text-shadow: 0 0 20px rgba(88, 101, 242, 0.5); }
-            to { text-shadow: 0 0 30px rgba(0, 217, 255, 0.8); }
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--text-dim);
+            margin-bottom: 50px;
+            max-width: 700px;
+            animation: fadeInUp 0.8s ease-out 0.2s backwards;
         }
 
-        .hero .tagline {
-            font-size: 24px;
-            color: #aaa;
-            margin-bottom: 10px;
-        }
-
-        .hero .tagline-premium {
-            font-size: 20px;
-            color: #00D9FF;
-            margin-bottom: 40px;
-            font-style: italic;
-        }
-
-        .stats {
-            display: flex;
-            gap: 50px;
-            margin-bottom: 40px;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 48px;
-            font-weight: bold;
-            color: #00D9FF;
-            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
-        }
-
-        .stat-label {
-            color: #888;
-            font-size: 14px;
-        }
-
-        .cta-buttons {
+        /* Buttons */
+        .btn-container {
             display: flex;
             gap: 20px;
+            animation: fadeInUp 0.8s ease-out 0.4s backwards;
             flex-wrap: wrap;
             justify-content: center;
         }
 
         .btn {
-            padding: 18px 40px;
-            font-size: 18px;
-            font-weight: bold;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 18px 45px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 50px;
             text-decoration: none;
-            display: inline-block;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: none;
+            position: relative;
+            z-index: 10;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #5865F2, #00D9FF);
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(88, 101, 242, 0.5);
+        .btn-gold {
+            background: var(--accent-gradient);
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(88, 101, 242, 0.7);
+        .btn-gold:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(255, 215, 0, 0.4);
         }
-
-        .btn-secondary {
+        
+        .btn-outline {
             background: transparent;
-            color: #00D9FF;
-            border: 2px solid #00D9FF;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--director-gold);
+            color: var(--director-gold);
+            transform: translateY(-4px);
         }
 
-        .btn-secondary:hover {
-            background: rgba(0, 217, 255, 0.1);
-            transform: translateY(-3px);
+        /* Stats Section */
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 100px;
+            flex-wrap: wrap;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out 0.6s backwards;
         }
 
-        .section {
-            padding: 100px 50px;
-            max-width: 1400px;
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 25px 50px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 215, 0, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--director-gold);
+            display: block;
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        /* --- Features Section --- */
+        .features {
+            padding: 120px 20px;
+            max-width: 1300px;
             margin: 0 auto;
         }
 
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
         .section-title {
-            font-size: 48px;
-            text-align: center;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #5865F2, #00D9FF);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 3rem;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            display: inline-block;
         }
-
+        
+        .section-title span {
+            color: var(--director-gold);
+        }
+        
         .section-subtitle {
-            text-align: center;
-            color: #888;
-            font-size: 18px;
-            margin-bottom: 60px;
+            color: var(--text-dim);
+            font-size: 1.1rem;
         }
 
-        .features-grid {
+        .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
         }
 
-        .feature-card {
-            background: rgba(255, 255, 255, 0.05);
+        .card {
+            background: var(--card-bg);
+            padding: 40px 30px;
+            border-radius: 24px;
+            transition: all 0.4s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 20px;
-            border: 2px solid rgba(88, 101, 242, 0.3);
-            transition: all 0.3s;
-            cursor: pointer;
         }
 
-        .feature-card:hover {
+        .card:hover {
             transform: translateY(-10px);
-            border-color: #00D9FF;
-            box-shadow: 0 20px 50px rgba(0, 217, 255, 0.3);
+            border-color: rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        
+        /* Subtle glow effect on card hover */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        
+        .card:hover::before {
+            opacity: 1;
         }
 
-        .feature-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-
-        .feature-card h3 {
-            font-size: 24px;
+        .card h3 {
+            font-size: 1.5rem;
             margin-bottom: 15px;
-            color: #00D9FF;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-icon {
+            color: var(--director-gold);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
         }
 
-        .feature-card p {
-            color: #aaa;
-            line-height: 1.6;
+        .card p {
+            color: var(--text-dim);
+            line-height: 1.7;
+            font-size: 1rem;
         }
 
-        .commands-container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 50px;
-            border-radius: 20px;
-            border: 2px solid rgba(88, 101, 242, 0.3);
+        /* --- Commands / Terminal Section --- */
+        .commands-section {
+            padding: 120px 20px;
+            background: linear-gradient(180deg, var(--void) 0%, #0a0a0a 100%);
+            position: relative;
         }
 
-        .command-category {
-            margin-bottom: 50px;
+        .cmd-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 80px;
         }
 
-        .command-category:last-child {
-            margin-bottom: 0;
+        .cmd-info {
+            flex: 1;
+            min-width: 300px;
         }
 
-        .command-category h3 {
-            font-size: 32px;
-            color: #00D9FF;
+        .cmd-info h2 {
+            font-size: 3rem;
             margin-bottom: 25px;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+        
+        .cmd-info h2 span {
+            color: var(--director-gold);
+        }
+
+        .cmd-info p {
+            color: var(--text-dim);
+            margin-bottom: 35px;
+            font-size: 1.15rem;
+        }
+
+        .terminal-window {
+            flex: 1;
+            min-width: 320px;
+            background: rgba(15, 15, 15, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Consolas', 'Monaco', monospace;
+            transform: perspective(1000px) rotateY(-5deg);
+            transition: transform 0.5s ease;
+        }
+        
+        .terminal-window:hover {
+            transform: perspective(1000px) rotateY(0deg);
+        }
+
+        .terminal-header {
+            background: #1a1a1a;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #333;
+        }
+
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+
+        .terminal-body {
+            padding: 25px;
+            color: #d4d4d4;
+            font-size: 0.95rem;
+            min-height: 300px;
+        }
+
+        .cmd-line {
+            margin-bottom: 20px;
+            display: block;
+            opacity: 0;
+            animation: fadeInTerminal 0.5s forwards;
+        }
+        
+        .cmd-line:nth-child(1) { animation-delay: 0.2s; }
+        .cmd-line:nth-child(2) { animation-delay: 1.2s; }
+        .cmd-line:nth-child(3) { animation-delay: 2.2s; }
+        .cmd-line:nth-child(4) { animation-delay: 3.2s; }
+
+        @keyframes fadeInTerminal {
+            to { opacity: 1; }
+        }
+
+        .cmd-command {
+            color: var(--director-gold);
+            font-weight: bold;
             display: flex;
             align-items: center;
-            gap: 15px;
+        }
+        
+        .cmd-command::before {
+            content: '>';
+            margin-right: 10px;
+            color: #666;
         }
 
-        .command-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
+        .cmd-response {
+            color: var(--text-dim);
+            margin-top: 8px;
+            display: block;
+            padding-left: 20px;
+            border-left: 2px solid #333;
         }
 
-        .command-item {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(88, 101, 242, 0.2);
-            transition: all 0.3s;
+        /* --- Modal (Documentation) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: #111;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #161616;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--director-gold);
+            font-weight: bold;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
             cursor: pointer;
+            transition: color 0.2s;
         }
 
-        .command-item:hover {
-            background: rgba(0, 217, 255, 0.1);
-            border-color: #00D9FF;
-            transform: translateX(5px);
+        .close-modal:hover { color: #fff; }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            color: #ddd;
         }
 
-        .command-name {
-            font-family: 'Courier New', monospace;
-            color: #00FF88;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
+        .doc-section { margin-bottom: 30px; }
+        .doc-section h4 { color: #fff; font-size: 1.2rem; margin-bottom: 15px; border-left: 3px solid var(--director-gold); padding-left: 10px; }
+        .doc-table { width: 100%; border-collapse: collapse; }
+        .doc-table th, .doc-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        .doc-table th { color: #888; font-weight: normal; font-size: 0.9rem; }
+        .doc-code { font-family: monospace; color: var(--director-gold); background: rgba(255, 215, 0, 0.1); padding: 4px 8px; border-radius: 4px; }
 
-        .command-desc {
-            color: #888;
-            font-size: 14px;
-        }
-
-        .premium-section {
-            background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(0, 217, 255, 0.1));
-            border-radius: 30px;
-            padding: 60px;
-            margin-top: 60px;
-            border: 2px solid rgba(0, 217, 255, 0.3);
-        }
-
-        .premium-title {
-            font-size: 42px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #00D9FF;
-        }
-
-        .premium-subtitle {
-            text-align: center;
-            color: #888;
-            font-size: 18px;
-            margin-bottom: 40px;
-        }
-
-        .premium-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-        }
-
-        .premium-feature {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 18px;
-            padding: 20px;
-            background: rgba(0, 217, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            transition: all 0.3s;
-        }
-
-        .premium-feature:hover {
-            background: rgba(0, 217, 255, 0.1);
-            transform: scale(1.05);
-        }
-
-        .premium-icon {
-            font-size: 32px;
-        }
-
+        /* --- Footer --- */
         footer {
-            background: rgba(10, 10, 15, 0.9);
-            padding: 40px 50px;
             text-align: center;
-            border-top: 2px solid rgba(88, 101, 242, 0.3);
-            margin-top: 100px;
+            padding: 80px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            background: #020202;
         }
+        
+        footer p { font-size: 1rem; margin-bottom: 10px; }
+        footer span { color: var(--director-gold); font-weight: 600; }
 
-        footer p {
-            color: #888;
-            margin-bottom: 20px;
-        }
-
-        .footer-links a {
-            color: #00D9FF;
-            text-decoration: none;
-            margin: 0 15px;
-            transition: all 0.3s;
-        }
-
-        .footer-links a:hover {
-            color: #5865F2;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 6px 12px;
-            background: rgba(0, 217, 255, 0.2);
-            border: 1px solid #00D9FF;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #00D9FF;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-
+        /* --- Mobile Responsiveness --- */
         @media (max-width: 768px) {
-            .hero h1 { font-size: 42px; }
-            .stats { flex-direction: column; gap: 20px; }
-            header { padding: 15px 20px; }
-            nav { display: none; }
-            .section { padding: 60px 20px; }
-            .commands-container { padding: 30px 20px; }
+            .hamburger { display: block; }
+            
+            .hamburger.active .bar:nth-child(2) { opacity: 0; }
+            .hamburger.active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+            .hamburger.active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+            .nav-links {
+                position: fixed;
+                left: -100%;
+                top: 70px; /* Below nav */
+                flex-direction: column;
+                background-color: #0d0d0d;
+                width: 100%;
+                text-align: center;
+                transition: 0.3s;
+                padding: 40px 0;
+                border-bottom: 1px solid #333;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+                gap: 25px;
+            }
+
+            .nav-links.active {
+                left: 0;
+            }
+
+            .hero h1 { font-size: 3.2rem; }
+            .hero p { font-size: 1.1rem; }
+            
+            .btn-container { flex-direction: column; width: 100%; align-items: center; }
+            .btn { width: 100%; max-width: 320px; }
+            
+            .cmd-container { flex-direction: column; gap: 40px; }
+            .terminal-window { transform: none; }
+            .terminal-window:hover { transform: none; }
+            
+            nav { padding: 15px 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="bg-animation"></div>
-    <div class="particles" id="particles"></div>
 
-    <header>
-        <div class="logo">Velno & VelnoX</div>
-        <nav>
-            <a href="#features">Features</a>
-            <a href="#commands">Commands</a>
-            <a href="#premium">Premium</a>
-        </nav>
-    </header>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">⚡ VELNO</div>
+        <ul class="nav-links">
+            <li><a href="#features" onclick="closeMenu()">Features</a></li>
+            <li><a href="#commands" onclick="closeMenu()">Commands</a></li>
+            <li><a href="#stats" onclick="closeMenu()">Stats</a></li>
+            <li><a href="#" onclick="alert('Discord link would open here!'); closeMenu();">Support</a></li>
+        </ul>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </div>
+    </nav>
 
+    <!-- Hero Section -->
     <section class="hero">
-        <h1>Velno & VelnoX</h1>
-        <p class="tagline">Smart. Simple. Steady.</p>
-        <p class="tagline-premium">Cool mind. Sharp code.</p>
+        <h1>ONE BOT TO<br><span>RULE THEM ALL</span></h1>
+        <p>Moderation, Leveling, Music, and World Domination. Replace every bot in your server with the ultimate system built for perfection.</p>
         
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number">2+</div>
-                <div class="stat-label">SERVERS</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">100+</div>
-                <div class="stat-label">USERS</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">45+</div>
-                <div class="stat-label">COMMANDS</div>
-            </div>
+        <div class="btn-container">
+            <a href="https://discord.com/" target="_blank" class="btn btn-gold">
+                <span>Add to Discord</span>
+            </a>
+            <a href="#" id="docsBtn" class="btn btn-outline">
+                <span>View Documentation</span>
+            </a>
         </div>
 
-        <div class="cta-buttons">
-            <a href="https://discord.com/api/oauth2/authorize?client_id=1431927437746503700&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">Add to Discord</a>
-            <a href="#commands" class="btn btn-secondary">View Commands</a>
-        </div>
-    </section>
-
-    <section class="section" id="features">
-        <h2 class="section-title">Powerful Features</h2>
-        <p class="section-subtitle">Everything you need in one bot</p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">💰</div>
-                <h3>Economy System</h3>
-                <p>Work, rob, commit crimes, steal, and claim daily rewards to build your V-Coin empire. Full banking system included!</p>
+        <div class="stats-container" id="stats">
+            <div class="stat-box">
+                <span class="stat-number" data-target="125">0</span>
+                <span class="stat-label">Servers Dominated</span>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎰</div>
-                <h3>Casino Games</h3>
-                <p>6 addictive casino games: Coinflip, Dice, Slot Machine, Blackjack, Roulette, and Jackpot. Win big or lose it all!</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🛡️</div>
-                <h3>Advanced Moderation</h3>
-                <p>9 powerful moderation tools including warn, mute, kick, ban, message cleanup, and channel locking capabilities.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">👑</div>
-                <h3>VelnoX Premium</h3>
-                <p>No-prefix commands, custom embeds, announcements, boost status, color roles, and reaction roles for premium members!</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Stats & Leaderboards</h3>
-                <p>Track earnings, losses, wins, and compete on the global leaderboard. Full game statistics tracking!</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3>Lightning Fast</h3>
-                <p>Built with Discord.js v14 and MongoDB. Optimized cooldowns and instant responses. 99% uptime guaranteed!</p>
+            <div class="stat-box">
+                <span class="stat-number" data-target="45302">0</span>
+                <span class="stat-label">Loyal Subjects</span>
             </div>
         </div>
     </section>
 
-    <section class="section" id="commands">
-        <h2 class="section-title">All Bot Commands</h2>
-        <p class="section-subtitle">45+ commands across 6 categories • Prefix: !</p>
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-header reveal">
+            <h2 class="section-title">The <span>Velno</span> Arsenal</h2>
+            <p class="section-subtitle">Everything you need to manage your community, all in one place.</p>
+        </div>
         
-        <div class="commands-container">
-            <div class="command-category">
-                <h3>💰 Economy Commands <span class="badge">9 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!work</div>
-                        <div class="command-desc">Earn V-Coins by working (10s cooldown)</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!balance</div>
-                        <div class="command-desc">Check your wallet and bank balance</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!deposit</div>
-                        <div class="command-desc">Move coins to your bank for safety</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!withdraw</div>
-                        <div class="command-desc">Take coins from your bank</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!rob</div>
-                        <div class="command-desc">Quick robberies for fast cash (10s cooldown)</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!crime</div>
-                        <div class="command-desc">High-risk crimes for big rewards (10s cooldown)</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!steal @user</div>
-                        <div class="command-desc">Steal from other players (10min cooldown)</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!daily</div>
-                        <div class="command-desc">Claim your daily reward (24hr cooldown)</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!lb</div>
-                        <div class="command-desc">View the top 10 richest users</div>
-                    </div>
-                </div>
+        <div class="grid">
+            <div class="card reveal">
+                <h3><span class="card-icon">🛡️</span> Absolute Moderation</h3>
+                <p>Keep your server clean with advanced Ban, Kick, Mute, and Purge commands. Includes AI-powered auto-mod to crush spam.</p>
+            </div>
+            
+            <div class="card reveal">
+                <h3><span class="card-icon">📊</span> Ranking System</h3>
+                <p>Reward activity with XP. Users climb from Citizen to Director. Includes custom Rank Cards and competitive Leaderboards.</p>
             </div>
 
-            <div class="command-category">
-                <h3>🎰 Casino Commands <span class="badge">6 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!coinflip &lt;bet&gt;</div>
-                        <div class="command-desc">50/50 chance to double your bet</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!dice &lt;bet&gt;</div>
-                        <div class="command-desc">Roll dice against the bot</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!slot &lt;bet&gt;</div>
-                        <div class="command-desc">Spin the slot machine for 5x wins</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!blackjack &lt;bet&gt;</div>
-                        <div class="command-desc">Classic blackjack - get 21!</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!roulette &lt;bet&gt;</div>
-                        <div class="command-desc">Spin the roulette wheel for 3x wins</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!jackpot &lt;bet&gt;</div>
-                        <div class="command-desc">2% chance to win the growing jackpot pool!</div>
-                    </div>
-                </div>
+            <div class="card reveal">
+                <h3><span class="card-icon">🎵</span> High-Fidelity Music</h3>
+                <p>Lag-free music playback supporting Spotify, SoundCloud, and more. Advanced filters like Bassboost included.</p>
             </div>
 
-            <div class="command-category">
-                <h3>📂 General Commands <span class="badge">7 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!help</div>
-                        <div class="command-desc">Show all available commands</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!ping</div>
-                        <div class="command-desc">Check bot response time</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!serverinfo</div>
-                        <div class="command-desc">View server statistics</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!userinfo</div>
-                        <div class="command-desc">View user profile information</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!avatar</div>
-                        <div class="command-desc">Display user's avatar in HD</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!joke</div>
-                        <div class="command-desc">Get a random programming joke</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!quote</div>
-                        <div class="command-desc">Get an inspirational quote</div>
-                    </div>
-                </div>
+            <div class="card reveal">
+                <h3><span class="card-icon">📜</span> Advanced Logging</h3>
+                <p>Track every movement. Message edits, deletions, member joins, and voice channel activity are recorded instantly.</p>
             </div>
 
-            <div class="command-category">
-                <h3>🛡️ Moderation Commands <span class="badge">9 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!warn @user</div>
-                        <div class="command-desc">Warn a user for breaking rules</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!kick @user</div>
-                        <div class="command-desc">Kick a user from the server</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!ban @user</div>
-                        <div class="command-desc">Ban a user permanently</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!clear [amount]</div>
-                        <div class="command-desc">Bulk delete 1-100 messages</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!botclear</div>
-                        <div class="command-desc">Delete only bot messages</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!mute @user</div>
-                        <div class="command-desc">Mute a member in the server</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!unmute @user</div>
-                        <div class="command-desc">Unmute a muted member</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!lock</div>
-                        <div class="command-desc">Lock the current channel</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!unlock</div>
-                        <div class="command-desc">Unlock a locked channel</div>
-                    </div>
-                </div>
+            <div class="card reveal">
+                <h3><span class="card-icon">🎭</span> Reaction Roles</h3>
+                <p>Allow users to self-assign roles with simple clicks. Supports buttons and dropdown menus for a cleaner look.</p>
             </div>
 
-            <div class="command-category">
-                <h3>👑 Premium Commands <span class="badge">7 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!status</div>
-                        <div class="command-desc">Check your VelnoX premium status</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!embed</div>
-                        <div class="command-desc">Create custom styled embeds</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!stats</div>
-                        <div class="command-desc">View detailed bot statistics</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!announce</div>
-                        <div class="command-desc">Send styled announcements</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!booststatus</div>
-                        <div class="command-desc">Check who boosted the server</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!colorrole</div>
-                        <div class="command-desc">Create custom colored roles</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">!reactionrole</div>
-                        <div class="command-desc">Setup reaction role systems</div>
-                    </div>
-                </div>
+            <div class="card reveal">
+                <h3><span class="card-icon">🎁</span> Giveaways</h3>
+                <p>Host automated giveaways with requirements like role checks or message counts to boost engagement.</p>
             </div>
 
-            <div class="command-category">
-                <h3>🧠 Utility Commands <span class="badge">5 COMMANDS</span></h3>
-                <div class="command-grid">
-                    <div class="command-item">
-                        <div class="command-name">!uptime</div>
-                        <div class="command-desc">Check how long bot's been running</div>
+            <div class="card reveal">
+                <h3><span class="card-icon">🎫</span> Ticket System</h3>
+                <p>Professional support system built-in. Create private channels for user support with automatic transcript generation.</p>
+            </div>
+
+            <div class="card reveal">
+                <h3><span class="card-icon">💰</span> Global Economy</h3>
+                <p>A complete economy system with Work, Rob, and Shop commands. Let users grind for virtual wealth across servers.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands Section -->
+    <section class="commands-section" id="commands">
+        <div class="cmd-container reveal">
+            <div class="cmd-info">
+                <h2>Command &<br><span>Conquer</span></h2>
+                <p>Intuitive slash commands make managing your empire easier than ever. Velno responds instantly with beautiful, embedded responses.</p>
+                <button onclick="openModal()" class="btn btn-gold" style="font-size: 1rem; padding: 12px 30px;">
+                    Explore Commands
+                </button>
+            </div>
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                </div>
+                <div class="terminal-body">
+                    <div class="cmd-line">
+                        <span class="cmd-command">/ban user:@Troll reason:Disobeying</span>
+                        <span class="cmd-response">🔨 @Troll has been banished to the shadow realm.</span>
                     </div>
-                    <div class="command-item">
-                        <div class="command-name">!invite</div>
-                        <div class="command-desc">Get the bot invite link</div>
+                    <div class="cmd-line">
+                        <span class="cmd-command">/play query:Imperial March</span>
+                        <span class="cmd-response">🎵 Searching for 'Imperial March'...<br>Added to queue!</span>
                     </div>
-                    <div class="command-item">
-                        <div class="command-name">!vote</div>
-                        <div class="command-desc">Vote for the bot on top.gg</div>
+                    <div class="cmd-line">
+                        <span class="cmd-command">/rank</span>
+                        <span class="cmd-response">📊 <b>The Director</b><br>Level: 99 | XP: 1,402,050<br>[██████████--------] 82%</span>
                     </div>
-                    <div class="command-item">
-                        <div class="command-name">!suggest</div>
-                        <div class="command-desc">Submit feature suggestions</div>
-                    </div>
-                    <div class="command-item">
-                        <div class="command-name">Slash Commands</div>
-                        <div class="command-desc">Works with / commands too!</div>
+                    <div class="cmd-line">
+                        <span class="cmd-command">/purge amount:50</span>
+                        <span class="cmd-response">🧹 Swept away 50 messages into the void.</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="section" id="premium">
-        <div class="premium-section">
-            <h2 class="premium-title">👑 VelnoX Premium Benefits</h2>
-            <p class="premium-subtitle">Get a VIP, VelnoX, or Premium Member role to unlock exclusive features!</p>
-            <div class="premium-features">
-                <div class="premium-feature">
-                    <span class="premium-icon">⚡</span>
-                    <span><strong>No-prefix commands</strong> - Type 'work' instead of '!work'</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">🎨</span>
-                    <span><strong>Custom embeds</strong> - Create beautiful styled messages</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">📊</span>
-                    <span><strong>Advanced stats</strong> - Detailed bot and server analytics</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">📢</span>
-                    <span><strong>Announcements</strong> - Send professional server updates</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">🚀</span>
-                    <span><strong>Boost tracking</strong> - See who's supporting your server</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">🎨</span>
-                    <span><strong>Color roles</strong> - Create custom colored roles</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">⭐</span>
-                    <span><strong>Reaction roles</strong> - Advanced role assignment system</span>
-                </div>
-                <div class="premium-feature">
-                    <span class="premium-icon">💎</span>
-                    <span><strong>VelnoX badge</strong> - Stand out with exclusive branding</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
+    <!-- Footer -->
     <footer>
-        <p>&copy; 2025 Velno & VelnoX Bot. Built with ❤️ by AdminPranav</p>
-        <p style="color: #00D9FF; font-size: 14px; margin-top: 10px;">
-            45+ Commands • 6 Casino Games • Advanced Economy • Full Moderation Suite
-        </p>
-        <div class="footer-links">
-            <a href="https://discord.gg/your-server">Support Server</a>
-            <a href="https://github.com/AdminPranav/velno-bot">GitHub</a>
-            <a href="https://discord.com/api/oauth2/authorize?client_id=1431927437746503700&permissions=8&scope=bot%20applications.commands">Add Bot</a>
-        </div>
+        <p>&copy; 2025 Velno — World Domination Edition.</p>
+        <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">Made by <span>Pranav</span></p>
     </footer>
 
+    <!-- Documentation Modal -->
+    <div class="modal-overlay" id="docsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Velno Documentation</span>
+                <button class="close-modal" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="doc-section">
+                    <h4>👑 Moderation</h4>
+                    <table class="doc-table">
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/ban [user]</span></td>
+                            <td>Permanently ban a user from the server.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/kick [user]</span></td>
+                            <td>Remove a user from the server.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/mute [user] [time]</span></td>
+                            <td>Timeout a user for a specific duration.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="doc-section">
+                    <h4>💰 Economy</h4>
+                    <table class="doc-table">
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/work</span></td>
+                            <td>Earn money by working a shift.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/rob [user]</span></td>
+                            <td>Attempt to steal coins from another user.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/shop</span></td>
+                            <td>View items available for purchase.</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="doc-section">
+                    <h4>🎵 Music</h4>
+                    <table class="doc-table">
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/play [song]</span></td>
+                            <td>Play a song from YouTube or Spotify.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="doc-code">/stop</span></td>
+                            <td>Stop music and clear the queue.</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p style="text-align: center; color: #666; margin-top: 20px;">
+                    This is a preview. <a href="#" style="color: var(--director-gold);">Visit full wiki</a> for more.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const particlesContainer = document.getElementById('particles');
-        for (let i = 0; i < 50; i++) {
-            const particle = document.createElement('div');
-            particle.classList.add('particle');
-            particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDelay = Math.random() * 10 + 's';
-            particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
-            particlesContainer.appendChild(particle);
+        // --- Navigation Logic ---
+        const nav = document.querySelector('nav');
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.querySelector('.nav-links');
+
+        function toggleMenu() {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('active');
         }
 
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
+        function closeMenu() {
+            hamburger.classList.remove('active');
+            navLinks.classList.remove('active');
+        }
+
+        // Change nav style on scroll
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                nav.style.background = 'rgba(5, 5, 5, 0.95)';
+                nav.style.padding = '15px 50px';
+            } else {
+                nav.style.background = 'rgba(5, 5, 5, 0.85)';
+                nav.style.padding = '20px 50px';
+            }
+        });
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('docsModal');
+        const docsBtn = document.getElementById('docsBtn');
+
+        // Open Modal
+        docsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+
+        function openModal() {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // --- Scroll Animations ---
+        const revealElements = document.querySelectorAll('.reveal');
+
+        const revealOnScroll = () => {
+            const windowHeight = window.innerHeight;
+            const elementVisible = 150;
+
+            revealElements.forEach((reveal) => {
+                const elementTop = reveal.getBoundingClientRect().top;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveal.classList.add('active');
                 }
+            });
+        };
+
+        window.addEventListener('scroll', revealOnScroll);
+        // Trigger once on load
+        revealOnScroll();
+
+        // --- Mouse Movement Effect for Cards ---
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
             });
         });
 
-        document.querySelectorAll('.command-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const commandName = this.querySelector('.command-name').textContent;
-                navigator.clipboard.writeText(commandName);
-                
-                const desc = this.querySelector('.command-desc');
-                const originalText = desc.textContent;
-                desc.textContent = '✓ Copied to clipboard!';
-                desc.style.color = '#00FF88';
-                
-                setTimeout(() => {
-                    desc.textContent = originalText;
-                    desc.style.color = '#888';
-                }, 1500);
-            });
-        });
+        // --- Stats Animation ---
+        function animateStats() {
+            const statsSection = document.getElementById("stats");
+            const statNumbers = document.querySelectorAll('.stat-number');
+            let animated = false;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !animated) {
+                        statNumbers.forEach(stat => {
+                            const target = +stat.getAttribute('data-target');
+                            const duration = 2000;
+                            const start = 0;
+                            let startTimestamp = null;
+                            
+                            const step = (timestamp) => {
+                                if (!startTimestamp) startTimestamp = timestamp;
+                                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                                const easeOutQuad = 1 - (1 - progress) * (1 - progress);
+                                stat.innerHTML = Math.floor(easeOutQuad * (target - start) + start).toLocaleString();
+                                if (progress < 1) {
+                                    window.requestAnimationFrame(step);
+                                }
+                            };
+                            window.requestAnimationFrame(step);
+                        });
+                        animated = true;
+                        observer.disconnect();
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            observer.observe(statsSection);
+        }
+
+        document.addEventListener("DOMContentLoaded", animateStats);
     </script>
+
 </body>
 </html>
