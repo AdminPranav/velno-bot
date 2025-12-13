@@ -647,15 +647,20 @@ const prefixCommands = {
         }
         
         const target = message.mentions.users.first();
-        if (!target) return message.reply('❌ Mention a user!');
+        if (!target) return message.reply('❌ Usage: `.trust @user`');
         
-        const user = await getUser(target.id, message.guild.id, target.username);
-        user.isPremium = true;
-        user.premiumSince = new Date();
-        await user.save();
-        
-        const embed = createEmbed('💎 VelnoX Premium Granted', `${target.tag} now has **VelnoX Premium**!\n\n✨ Benefits:\n• No cooldowns\n• Bonus earnings\n• Premium badge`, CONFIG.COLORS.primary);
-        message.reply({ embeds: [embed] });
+        try {
+            const user = await getUser(target.id, message.guild.id, target.username);
+            user.isPremium = true;
+            user.premiumSince = new Date();
+            await user.save();
+            
+            const embed = createEmbed('💎 VelnoX Premium Granted', `**${target.username}** now has VelnoX Premium!\n\n✨ Benefits:\n• No cooldowns\n• Bonus earnings\n• Premium badge`, CONFIG.COLORS.primary);
+            message.reply({ embeds: [embed] });
+        } catch (error) {
+            console.error('Trust error:', error);
+            message.reply('❌ Error granting premium! Check console.');
+        }
     },
     
     untrust: async (message, args) => {
