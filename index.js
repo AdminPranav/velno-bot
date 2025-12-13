@@ -26,9 +26,9 @@ const mongoose = require('mongoose');
 const cron = require('node-cron');
 const express = require('express');
 //const { createCanvas, loadImage, registerFont } = require('canvas');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
-const play = require('play-dl');
+//const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+//const ytdl = require('ytdl-core');
+//const play = require('play-dl');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
@@ -1363,4 +1363,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🌐 Web server: Port ${PORT}`);
 });
+
 
