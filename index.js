@@ -562,7 +562,7 @@ client.once(Events.ClientReady, async () => {
     console.log('╚═══════════════════════════════════════════════╝');
     console.log(`✅ Logged in as: ${client.user.tag}`);
     console.log(`📊 Servers: ${client.guilds.cache.size}`);
-    console.log(`🎯 Prefix: ${CONFIG.PREFIX}`);
+    console.log(`🎯 Current Prefix: ${CONFIG.PREFIX}`);
     console.log('══════════════════════════════════════════════════\n');
 
     const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
