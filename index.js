@@ -83,7 +83,7 @@ const client = new Client({
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// FIX: description is optional – setDescription('') throws in discord.js
+// description is optional – setDescription('') throws in discord.js
 function createEmbed(title, description, color = THEME.GOLD) {
     const embed = new EmbedBuilder()
         .setColor(color)
@@ -119,10 +119,8 @@ async function runCommand(command, i, isSlash, args) {
     }
 }
 
-/// ═══════════════════════════════════════════════════════════════════════════════
-// PART A — REPLACE your whole "MUSIC ENGINE" section with this
-// (from the "MUSIC ENGINE" comment down to the end of getOrCreateState)
-// Same function names as before, so skip/stop commands keep working.
+// ═══════════════════════════════════════════════════════════════════════════════
+// MUSIC ENGINE  (SoundCloud → YouTube fallback, optional Spotify links)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const guildMusic = new Map();     // guildId -> { queue, player, connection, textChannel, token }
@@ -131,7 +129,7 @@ let scReady = false;
 let spotifyTried = false;
 let spotifyEnabled = false;
 
-// Runs automatically the first time someone uses .play — no startup changes needed
+// Runs automatically the first time someone uses play — no startup changes needed
 async function initMusic() {
     if (!scReady) {
         try {
@@ -144,7 +142,7 @@ async function initMusic() {
         }
     }
 
-    // Optional Spotify links (needs the 3 env vars, see notes at the bottom)
+    // Optional Spotify links (needs the 3 env vars)
     if (!spotifyTried) {
         spotifyTried = true;
         if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REFRESH_TOKEN) {
@@ -345,69 +343,6 @@ async function getOrCreateState(guild, voiceChannel, textChannel) {
     return creating;
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PART B — REPLACE your old `play` command object inside `const commands = [ ... ]`
-// (the one that starts with  name: 'play',  and ends before  name: 'skip')
-// ═══════════════════════════════════════════════════════════════════════════════
-
-    {
-        name: 'play',
-        description; 'Queue a melody',
-        options; [{ name: 'song', type: 3, description: 'Song name, SoundCloud link, or Spotify link', required: true }],
-        execute; async (i, isSlash, args) => {
-            const voiceChannel = i.member.voice?.channel;
-            if (!voiceChannel) return reply(i, '❌ Connect to a voice channel first.');
-
-            const query = isSlash ? i.options.getString('song') : args.join(' ');
-            if (!query) return reply(i, '❌ Tell me what to play.');
-
-            const existing = guildMusic.get(i.guild.id);
-            if (existing && existing.connection.joinConfig.channelId !== voiceChannel.id) {
-                return reply(i, '❌ Join the voice channel I\'m already in.');
-            }
-
-            if (isSlash) await i.deferReply();
-            else await i.channel.sendTyping();
-
-            const tracks = await resolveTracks(query, i.member.user.username);
-            if (!tracks.length) return reply(i, '❌ No melody found.');
-
-            const state = await getOrCreateState(i.guild, voiceChannel, i.channel);
-            const wasEmpty = state.queue.length === 0;
-            const position = state.queue.length + 1;
-            state.queue.push(...tracks);
-
-            if (tracks.length > 1) {
-                await reply(i, { embeds: [createEmbed('📜 Playlist Added', `Added **${tracks.length}** tracks to the queue.`, THEME.GOLD)] });
-            } else if (wasEmpty) {
-                await reply(i, `🎵 **Starting:** ${tracks[0].title}`);
-            } else {
-                const embed = createEmbed('📜 Added to Queue', `**${tracks[0].title}**\nPosition: ${position}`, THEME.GOLD);
-                if (tracks[0].thumbnail) embed.setThumbnail(tracks[0].thumbnail);
-                await reply(i, { embeds: [embed] });
-            }
-
-            if (wasEmpty) playNext(i.guild.id);
-        }
-    }
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SETUP NOTES
-//
-// 1) Install packages (run in your project, then redeploy):
-//      npm install @discordjs/voice play-dl tweetnacl opusscript ffmpeg-static
-//    and in package.json add:   "engines": { "node": "20.x" }
-//
-// 2) Also remove this old line near the top of your file if it exists:
-//      play.setToken({ youtube : { cookie : "" } });
-//
-// 3) OPTIONAL Spotify links: add these env vars on Render
-//      SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN
-//    (get the refresh token by running  node -e "require('play-dl').authorization()"
-//     on your own computer and choosing Spotify). Skip this if you don't need it.
-// ═══════════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMMANDS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -505,7 +440,7 @@ const commands = [
     {
         name: 'play',
         description: 'Queue a melody',
-        options: [{ name: 'song', type: 3, description: 'URL or Name', required: true }],
+        options: [{ name: 'song', type: 3, description: 'Song name, SoundCloud link, or Spotify link', required: true }],
         execute: async (i, isSlash, args) => {
             const voiceChannel = i.member.voice?.channel;
             if (!voiceChannel) return reply(i, '❌ Connect to a voice channel first.');
@@ -513,36 +448,33 @@ const commands = [
             const query = isSlash ? i.options.getString('song') : args.join(' ');
             if (!query) return reply(i, '❌ Tell me what to play.');
 
+            const existing = guildMusic.get(i.guild.id);
+            if (existing && existing.connection.joinConfig.channelId !== voiceChannel.id) {
+                return reply(i, '❌ Join the voice channel I\'m already in.');
+            }
+
             if (isSlash) await i.deferReply();
             else await i.channel.sendTyping();
 
-            let video;
-            if (play.yt_validate(query) === 'video') {
-                video = (await play.video_basic_info(query)).video_details;
-            } else {
-                const results = await play.search(query, { limit: 1 });
-                video = results?.[0];
-            }
-            if (!video) return reply(i, '❌ No melody found.');
+            const tracks = await resolveTracks(query, i.member.user.username);
+            if (!tracks.length) return reply(i, '❌ No melody found.');
 
             const state = await getOrCreateState(i.guild, voiceChannel, i.channel);
             const wasEmpty = state.queue.length === 0;
+            const position = state.queue.length + 1;
+            state.queue.push(...tracks);
 
-            state.queue.push({
-                title: video.title,
-                url: video.url,
-                duration: video.durationRaw,
-                thumbnail: video.thumbnails?.[0]?.url
-            });
-
-            if (wasEmpty) {
-                await reply(i, `🎵 **Starting:** ${video.title}`);
-                playNext(i.guild.id);
+            if (tracks.length > 1) {
+                await reply(i, { embeds: [createEmbed('📜 Playlist Added', `Added **${tracks.length}** tracks to the queue.`, THEME.GOLD)] });
+            } else if (wasEmpty) {
+                await reply(i, `🎵 **Starting:** ${tracks[0].title}`);
             } else {
-                const embed = createEmbed('📜 Added to Queue', `**${video.title}**\nLength: ${video.durationRaw}`);
-                if (video.thumbnails?.[0]?.url) embed.setThumbnail(video.thumbnails[0].url);
+                const embed = createEmbed('📜 Added to Queue', `**${tracks[0].title}**\nPosition: ${position}`, THEME.GOLD);
+                if (tracks[0].thumbnail) embed.setThumbnail(tracks[0].thumbnail);
                 await reply(i, { embeds: [embed] });
             }
+
+            if (wasEmpty) playNext(i.guild.id);
         }
     },
     {
@@ -551,7 +483,14 @@ const commands = [
         execute: async (i) => {
             const state = guildMusic.get(i.guild.id);
             if (!state || state.queue.length === 0) return reply(i, '❌ Nothing playing.');
-            state.player.stop(); // Idle handler moves to the next track
+
+            if (state.player.state.status === AudioPlayerStatus.Idle) {
+                // Song still loading — advance manually
+                state.queue.shift();
+                playNext(i.guild.id);
+            } else {
+                state.player.stop(); // Idle handler moves to the next track
+            }
             await reply(i, '⏭️ **Skipped.**');
         }
     },
@@ -611,7 +550,20 @@ const commands = [
 // ═══════════════════════════════════════════════════════════════════════════════
 
 client.once(Events.ClientReady, async () => {
-    console.log('👑 VELNO SOVEREIGN IS ONLINE');
+ console.log('╔═══════════════════════════════════════════════╗');
+    console.log('║   ⚡ VELNO ULTIMATE — FINAL BOSS VERSION     ║');
+    console.log('║                                               ║');
+    console.log('║   ✅ PREFIX COMMANDS (.) ENABLED             ║');
+    console.log('║   ✅ SLASH COMMANDS (/) ENABLED              ║');
+    console.log('║   ✅ MUSIC SYSTEM ACTIVE                     ║');
+    console.log('║   ✅ ANTI-NUKE PROTECTION ACTIVE             ║');
+    console.log('║   ✅ TRUST SYSTEM FIXED                      ║');
+    console.log('║   ✅ 100+ COMMANDS LOADED                    ║');
+    console.log('╚═══════════════════════════════════════════════╝');
+    console.log(`✅ Logged in as: ${client.user.tag}`);
+    console.log(`📊 Servers: ${client.guilds.cache.size}`);
+    console.log(`🎯 Prefix: ${CONFIG.PREFIX}`);
+    console.log('══════════════════════════════════════════════════\n');
 
     const rest = new REST({ version: '10' }).setToken(CONFIG.TOKEN);
     try {
