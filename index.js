@@ -27,10 +27,11 @@ process.on('unhandledRejection', err => console.error('Unhandled rejection:', er
 process.on('uncaughtException', err => console.error('Uncaught exception:', err));
 
 const THEME = {
-    GOLD: '#FFD700',
+    GOLD: '#241847',
     ERROR: '#DC2626',
-    SUCCESS: '#10B981',
-    FOOTER: 'Velno Sovereign • Exclusive Systems'
+    SUCCESS: '#10b967',
+    WARNING: '#9e6611',
+    FOOTER: '✦ Velno • Engineered with purpose.'
 };
 
 const CONFIG = {
@@ -118,18 +119,147 @@ async function runCommand(command, i, isSlash, args) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MUSIC ENGINE  (one state object per guild)
+/// ═══════════════════════════════════════════════════════════════════════════════
+// PART A — REPLACE your whole "MUSIC ENGINE" section with this
+// (from the "MUSIC ENGINE" comment down to the end of getOrCreateState)
+// Same function names as before, so skip/stop commands keep working.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const guildMusic = new Map(); // guildId -> { queue, player, connection, textChannel }
+const guildMusic = new Map();     // guildId -> { queue, player, connection, textChannel, token }
+const stateCreation = new Map();  // guildId -> Promise (stops double-joining)
+let scReady = false;
+let spotifyTried = false;
+let spotifyEnabled = false;
+
+// Runs automatically the first time someone uses .play — no startup changes needed
+async function initMusic() {
+    if (!scReady) {
+        try {
+            const clientId = await play.getFreeClientID();
+            await play.setToken({ soundcloud: { client_id: clientId } });
+            scReady = true;
+            console.log('🎵 SoundCloud ready');
+        } catch (err) {
+            console.error('❌ SoundCloud init failed:', err.message);
+        }
+    }
+
+    // Optional Spotify links (needs the 3 env vars, see notes at the bottom)
+    if (!spotifyTried) {
+        spotifyTried = true;
+        if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REFRESH_TOKEN) {
+            try {
+                await play.setToken({
+                    spotify: {
+                        client_id: process.env.SPOTIFY_CLIENT_ID,
+                        client_secret: process.env.SPOTIFY_CLIENT_SECRET,
+                        refresh_token: process.env.SPOTIFY_REFRESH_TOKEN,
+                        market: process.env.SPOTIFY_MARKET || 'US'
+                    }
+                });
+                spotifyEnabled = true;
+                console.log('🎵 Spotify links ready');
+            } catch (err) {
+                console.error('❌ Spotify init failed:', err.message);
+            }
+        }
+    }
+}
+
+function fmtDuration(sec) {
+    if (!sec) return 'Live';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return h > 0
+        ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Turns what the user typed into queue items
+async function resolveTracks(query, requester) {
+    await initMusic();
+    const type = await play.validate(query);
+
+    if (type === false) throw new Error('That link is not supported.');
+
+    // Plain text → SoundCloud first, then YouTube
+    if (type === 'search') {
+        let results = await play.search(query, { source: { soundcloud: 'tracks' }, limit: 1 }).catch(() => []);
+        if (!results.length) results = await play.search(query, { limit: 1 }).catch(() => []);
+        if (!results.length) return [];
+        const r = results[0];
+        return [{
+            title: r.name || r.title,
+            url: r.url,
+            duration: fmtDuration(r.durationInSec),
+            thumbnail: r.thumbnail?.url || r.thumbnails?.[0]?.url || (typeof r.thumbnail === 'string' ? r.thumbnail : null),
+            requester
+        }];
+    }
+
+    // SoundCloud links
+    if (type === 'so_track') {
+        const t = await play.soundcloud(query);
+        return [{ title: t.name, url: t.url, duration: fmtDuration(t.durationInSec), thumbnail: t.thumbnail || null, requester }];
+    }
+    if (type === 'so_playlist') {
+        const p = await play.soundcloud(query);
+        const tracks = await p.all_tracks();
+        return tracks.slice(0, 50).map(t => ({
+            title: t.name, url: t.url, duration: fmtDuration(t.durationInSec), thumbnail: t.thumbnail || null, requester
+        }));
+    }
+
+    // Spotify links → read names, find audio on SoundCloud/YouTube right before playing
+    if (type === 'sp_track' || type === 'sp_album' || type === 'sp_playlist') {
+        if (!spotifyEnabled) {
+            throw new Error('Spotify links are not set up on this bot. Use a song name or a SoundCloud link.');
+        }
+        if (play.is_expired()) await play.refreshToken();
+
+        const toSong = t => {
+            const artist = t.artists?.[0]?.name || '';
+            return {
+                title: artist ? `${artist} - ${t.name}` : t.name,
+                url: null,
+                search: `${artist} ${t.name}`.trim(),
+                duration: fmtDuration(t.durationInSec),
+                thumbnail: t.thumbnail?.url || null,
+                requester
+            };
+        };
+
+        const sp = await play.spotify(query);
+        if (type === 'sp_track') return [toSong(sp)];
+        const all = await sp.all_tracks();
+        return all.slice(0, 50).map(toSong);
+    }
+
+    // Direct YouTube video link
+    if (type === 'yt_video') {
+        const v = (await play.video_basic_info(query)).video_details;
+        return [{ title: v.title, url: v.url, duration: v.durationRaw, thumbnail: v.thumbnails?.[0]?.url || null, requester }];
+    }
+
+    throw new Error('That link type is not supported. Use a song name, SoundCloud link, or Spotify link.');
+}
+
+// Spotify items have no URL yet — find one now
+async function ensurePlayable(song) {
+    if (song.url) return;
+    let results = await play.search(song.search, { source: { soundcloud: 'tracks' }, limit: 1 }).catch(() => []);
+    if (!results.length) results = await play.search(song.search, { limit: 1 }).catch(() => []);
+    if (!results.length) throw new Error(`No playable match for "${song.title}"`);
+    song.url = results[0].url;
+}
 
 function cleanupGuild(guildId) {
     const state = guildMusic.get(guildId);
     if (!state) return;
+    guildMusic.delete(guildId); // delete first so the handlers below do nothing
     try { state.player.stop(true); } catch {}
     try { state.connection.destroy(); } catch {}
-    guildMusic.delete(guildId);
 }
 
 async function playNext(guildId) {
@@ -139,68 +269,145 @@ async function playNext(guildId) {
     const song = state.queue[0];
     if (!song) return cleanupGuild(guildId);
 
+    const token = ++state.token; // cancels any older playNext still loading
+
     try {
+        await ensurePlayable(song);
         const stream = await play.stream(song.url);
+        if (state.token !== token || !guildMusic.has(guildId)) return;
+
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         state.player.play(resource);
 
         const embed = createEmbed('🎶 Now Playing', `[**${song.title}**](${song.url})`)
-            .addFields({ name: 'Duration', value: song.duration || 'Live', inline: true });
+            .addFields(
+                { name: 'Duration', value: song.duration || 'Live', inline: true },
+                { name: 'Requester', value: song.requester || 'Unknown', inline: true }
+            );
         if (song.thumbnail) embed.setImage(song.thumbnail);
         state.textChannel.send({ embeds: [embed] }).catch(() => {});
     } catch (err) {
-        console.error('Stream error:', err);
-        state.textChannel.send('❌ Could not stream that track. Skipping...').catch(() => {});
+        console.error('Stream error:', err.message);
+        if (state.token !== token) return;
+        state.textChannel.send(`❌ Could not play **${song.title}**. Skipping...`).catch(() => {});
         state.queue.shift();
         playNext(guildId);
     }
 }
 
 async function getOrCreateState(guild, voiceChannel, textChannel) {
-    let state = guildMusic.get(guild.id);
-    if (state) return state;
+    if (guildMusic.has(guild.id)) return guildMusic.get(guild.id);
+    if (stateCreation.has(guild.id)) return stateCreation.get(guild.id);
 
-    const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: guild.id,
-        adapterCreator: guild.voiceAdapterCreator,
-        selfDeaf: true
-    });
+    const creating = (async () => {
+        const connection = joinVoiceChannel({
+            channelId: voiceChannel.id,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: true
+        });
 
-    try {
-        await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
-    } catch (err) {
-        connection.destroy();
-        throw new Error('Could not join the voice channel (check bot permissions).');
-    }
-
-    const player = createAudioPlayer();
-    connection.subscribe(player);
-
-    state = { queue: [], player, connection, textChannel };
-    guildMusic.set(guild.id, state);
-
-    // Registered ONCE per guild (the old code stacked listeners per song)
-    player.on(AudioPlayerStatus.Idle, () => {
-        state.queue.shift();
-        playNext(guild.id);
-    });
-    player.on('error', err => console.error('Player error:', err.message));
-
-    connection.on(VoiceConnectionStatus.Disconnected, async () => {
         try {
-            await Promise.race([
-                entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-                entersState(connection, VoiceConnectionStatus.Connecting, 5_000)
-            ]);
+            await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
         } catch {
-            cleanupGuild(guild.id);
+            try { connection.destroy(); } catch {}
+            throw new Error('Could not join the voice channel (check bot permissions).');
         }
-    });
 
-    return state;
+        const player = createAudioPlayer();
+        connection.subscribe(player);
+
+        const state = { queue: [], player, connection, textChannel, token: 0 };
+        guildMusic.set(guild.id, state);
+
+        player.on(AudioPlayerStatus.Idle, () => {
+            if (guildMusic.get(guild.id) !== state) return;
+            state.queue.shift();
+            playNext(guild.id);
+        });
+        player.on('error', err => console.error('Player error:', err.message));
+
+        connection.on(VoiceConnectionStatus.Disconnected, async () => {
+            try {
+                await Promise.race([
+                    entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+                    entersState(connection, VoiceConnectionStatus.Connecting, 5_000)
+                ]);
+            } catch {
+                cleanupGuild(guild.id);
+            }
+        });
+
+        return state;
+    })().finally(() => stateCreation.delete(guild.id));
+
+    stateCreation.set(guild.id, creating);
+    return creating;
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PART B — REPLACE your old `play` command object inside `const commands = [ ... ]`
+// (the one that starts with  name: 'play',  and ends before  name: 'skip')
+// ═══════════════════════════════════════════════════════════════════════════════
+
+    {
+        name: 'play',
+        description; 'Queue a melody',
+        options; [{ name: 'song', type: 3, description: 'Song name, SoundCloud link, or Spotify link', required: true }],
+        execute; async (i, isSlash, args) => {
+            const voiceChannel = i.member.voice?.channel;
+            if (!voiceChannel) return reply(i, '❌ Connect to a voice channel first.');
+
+            const query = isSlash ? i.options.getString('song') : args.join(' ');
+            if (!query) return reply(i, '❌ Tell me what to play.');
+
+            const existing = guildMusic.get(i.guild.id);
+            if (existing && existing.connection.joinConfig.channelId !== voiceChannel.id) {
+                return reply(i, '❌ Join the voice channel I\'m already in.');
+            }
+
+            if (isSlash) await i.deferReply();
+            else await i.channel.sendTyping();
+
+            const tracks = await resolveTracks(query, i.member.user.username);
+            if (!tracks.length) return reply(i, '❌ No melody found.');
+
+            const state = await getOrCreateState(i.guild, voiceChannel, i.channel);
+            const wasEmpty = state.queue.length === 0;
+            const position = state.queue.length + 1;
+            state.queue.push(...tracks);
+
+            if (tracks.length > 1) {
+                await reply(i, { embeds: [createEmbed('📜 Playlist Added', `Added **${tracks.length}** tracks to the queue.`, THEME.GOLD)] });
+            } else if (wasEmpty) {
+                await reply(i, `🎵 **Starting:** ${tracks[0].title}`);
+            } else {
+                const embed = createEmbed('📜 Added to Queue', `**${tracks[0].title}**\nPosition: ${position}`, THEME.GOLD);
+                if (tracks[0].thumbnail) embed.setThumbnail(tracks[0].thumbnail);
+                await reply(i, { embeds: [embed] });
+            }
+
+            if (wasEmpty) playNext(i.guild.id);
+        }
+    }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETUP NOTES
+//
+// 1) Install packages (run in your project, then redeploy):
+//      npm install @discordjs/voice play-dl tweetnacl opusscript ffmpeg-static
+//    and in package.json add:   "engines": { "node": "20.x" }
+//
+// 2) Also remove this old line near the top of your file if it exists:
+//      play.setToken({ youtube : { cookie : "" } });
+//
+// 3) OPTIONAL Spotify links: add these env vars on Render
+//      SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN
+//    (get the refresh token by running  node -e "require('play-dl').authorization()"
+//     on your own computer and choosing Spotify). Skip this if you don't need it.
+// ═══════════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMMANDS
 // ═══════════════════════════════════════════════════════════════════════════════
